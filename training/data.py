@@ -220,10 +220,10 @@ def build_train_augmentation() -> Any:
 
 class SpiralWaveDataset(_TorchDataset):
     """torch.utils.data.Dataset over a fold-assigned manifest. Applies
-    common.preprocess.preprocess_image, then, on train folds only, the
-    augmentation from build_train_augmentation. Imports torch lazily so
-    training/data.py stays importable without the heavy training stack
-    installed; instantiating this class does require it."""
+    common.preprocess.preprocess_image, then, when augmentation is
+    enabled, the augmentation from build_train_augmentation. Imports
+    torch lazily so training/data.py stays importable without the heavy
+    training stack installed; instantiating this class does require it."""
 
     def __init__(
         self,
@@ -231,11 +231,20 @@ class SpiralWaveDataset(_TorchDataset):
         fold_ids: list[int],
         preprocess_config: PreprocessConfig | None = None,
         train: bool = False,
+        augment: bool | None = None,
     ) -> None:
+        """train controls which rows are treated as a training split (only
+        relevant to callers that branch on it); augment controls whether
+        the on-the-fly augmentation pipeline runs, and defaults to train
+        so the common case (train=True means "augment") does not need
+        both arguments. The augmentation ablation in training/ablations.py
+        passes augment=False with train=True to get a training split with
+        no augmentation."""
         self.manifest = manifest[manifest["fold"].isin(fold_ids)].reset_index(drop=True)
         self.preprocess_config = preprocess_config or PreprocessConfig()
         self.train = train
-        self.augmentation = build_train_augmentation() if train else None
+        self.augment = train if augment is None else augment
+        self.augmentation = build_train_augmentation() if self.augment else None
 
     def __len__(self) -> int:
         return len(self.manifest)
@@ -245,7 +254,7 @@ class SpiralWaveDataset(_TorchDataset):
 
         row = self.manifest.iloc[index]
         array = preprocess_image(row["path"], self.preprocess_config)
-        if self.train and self.augmentation is not None:
+        if self.augment and self.augmentation is not None:
             image = Image.fromarray((array * 255).astype(np.uint8))
             tensor = self.augmentation(image)
         else:

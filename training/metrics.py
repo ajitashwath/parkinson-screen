@@ -142,3 +142,46 @@ def bootstrap_auc_ci(
     lower = float(np.percentile(scores, 100 * alpha))
     upper = float(np.percentile(scores, 100 * (1 - alpha)))
     return point_estimate, lower, upper
+
+
+def paired_bootstrap_comparison(
+    y_true: np.ndarray,
+    y_prob_a: np.ndarray,
+    y_prob_b: np.ndarray,
+    n_bootstrap: int = 1000,
+    seed: int = 42,
+) -> dict[str, float]:
+    """Paired bootstrap test for whether model A's AUC differs from model
+    B's on the same test set: resample indices once per iteration and
+    apply the same resample to both models, so the comparison controls
+    for which examples are easy or hard rather than treating the two
+    AUCs as independent. Returns the observed AUC difference and a
+    two-sided p-value (the fraction of resampled differences at least as
+    extreme, in either direction, as zero given the observed direction).
+    With small n, many real differences will not reach significance; that
+    is reported honestly rather than papered over."""
+    y_true = np.asarray(y_true)
+    y_prob_a, y_prob_b = np.asarray(y_prob_a), np.asarray(y_prob_b)
+    rng = np.random.default_rng(seed)
+    n = len(y_true)
+
+    observed_diff = roc_auc_score(y_true, y_prob_a) - roc_auc_score(y_true, y_prob_b)
+    diffs = []
+    for _ in range(n_bootstrap):
+        indices = rng.integers(0, n, size=n)
+        y_true_sample = y_true[indices]
+        if len(np.unique(y_true_sample)) < 2:
+            continue
+        diff = roc_auc_score(y_true_sample, y_prob_a[indices]) - roc_auc_score(
+            y_true_sample, y_prob_b[indices]
+        )
+        diffs.append(diff)
+
+    if not diffs:
+        return {"observed_diff": float(observed_diff), "p_value": float("nan")}
+    diffs_array = np.array(diffs)
+    # Center at zero (the null: no true difference), then ask how often a
+    # centered resample is at least as extreme as the observed difference.
+    centered = diffs_array - diffs_array.mean()
+    p_value = float(np.mean(np.abs(centered) >= np.abs(observed_diff)))
+    return {"observed_diff": float(observed_diff), "p_value": p_value}

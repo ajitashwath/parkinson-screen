@@ -36,8 +36,8 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.model_selection import StratifiedGroupKFold
 from torch.utils.data import DataLoader
 
-from common.preprocess import PreprocessConfig
-from training.backbones import BackboneName, count_parameters
+from common.preprocess import PreprocessConfig, PreprocessMode
+from training.backbones import BackboneName, Dinov2Mode, count_parameters
 from training.baselines import HogSvmConfig, predict_proba, train_hog_svm
 from training.data import SpiralWaveDataset, assign_folds, has_usable_subject_ids
 from training.lit_model import SpiralWaveClassifier
@@ -91,11 +91,13 @@ def sample_fast_subset(manifest: pd.DataFrame, per_class: int, seed: int) -> pd.
 
 
 def as_single_fold_dataset(
-    df: pd.DataFrame, preprocess_config: PreprocessConfig, train: bool
+    df: pd.DataFrame, preprocess_config: PreprocessConfig, train: bool, augment: bool | None = None
 ) -> SpiralWaveDataset:
     tagged = df.copy()
     tagged["fold"] = 0
-    return SpiralWaveDataset(tagged, fold_ids=[0], preprocess_config=preprocess_config, train=train)
+    return SpiralWaveDataset(
+        tagged, fold_ids=[0], preprocess_config=preprocess_config, train=train, augment=augment
+    )
 
 
 def predict_probabilities(
@@ -117,28 +119,35 @@ def measure_cpu_latency_ms(model: torch.nn.Module, image_size: int, n_runs: int 
     return (elapsed / n_runs) * 1000.0
 
 
-def train_one_backbone(
+def fit_backbone(
     backbone_name: BackboneName,
     train_df: pd.DataFrame,
-    test_df: pd.DataFrame,
     config: dict[str, Any],
     seed: int,
-    fold: int,
     max_epochs: int,
     pretrained: bool,
-) -> dict[str, Any]:
+    augment: bool | None = None,
+    freeze_epochs: int | None = None,
+    dinov2_mode: Dinov2Mode = "full_finetune",
+    preprocess_mode: PreprocessMode = "standard",
+) -> tuple[Trainer, SpiralWaveClassifier, float, pd.DataFrame]:
+    """Train one backbone and pick its decision threshold on a held-out
+    validation split, without touching any test set. Returns the trainer,
+    the best-epoch model, the selected threshold, and the validation
+    dataframe with its true/predicted-probability columns attached (used
+    by training/ablations.py's kind-fusion stacker). Split out of
+    train_one_backbone so training/robustness.py can fit a model once and
+    evaluate it against many corrupted test sets without retraining."""
     set_all_seeds(seed)
-    preprocess_config = PreprocessConfig(size=config["image_size"])
+    preprocess_config = PreprocessConfig(size=config["image_size"], mode=preprocess_mode)
     fit_df, val_df = split_train_val(train_df, config["val_fraction"], seed)
 
-    train_dataset = as_single_fold_dataset(fit_df, preprocess_config, train=True)
+    train_dataset = as_single_fold_dataset(fit_df, preprocess_config, train=True, augment=augment)
     val_dataset = as_single_fold_dataset(val_df, preprocess_config, train=False)
-    test_dataset = as_single_fold_dataset(test_df, preprocess_config, train=False)
 
     batch_size = config["batch_size"]
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     positive_fraction = (fit_df["label"] == "parkinson").mean()
     pos_weight = (1 - positive_fraction) / positive_fraction if 0 < positive_fraction < 1 else None
@@ -146,9 +155,10 @@ def train_one_backbone(
     model = SpiralWaveClassifier(
         backbone_name=backbone_name,
         pretrained=pretrained,
+        dinov2_mode=dinov2_mode,
         head_lr=config["head_lr"],
         backbone_lr=config["backbone_lr"],
-        freeze_epochs=config["freeze_epochs"],
+        freeze_epochs=freeze_epochs if freeze_epochs is not None else config["freeze_epochs"],
         label_smoothing=config["label_smoothing"],
         pos_weight=pos_weight,
         max_epochs=max_epochs,
@@ -192,22 +202,86 @@ def train_one_backbone(
         val_labels = np.array([1 if label == "parkinson" else 0 for label in val_df["label"]])
         threshold = select_threshold(val_labels, val_probabilities, config["target_sensitivity"])
 
-        test_probabilities = predict_probabilities(trainer, best_model, test_loader)
-        test_labels = np.array([1 if label == "parkinson" else 0 for label in test_df["label"]])
-        metrics = compute_metrics(test_labels, test_probabilities, threshold)
-        _, auc_lower, auc_upper = bootstrap_auc_ci(test_labels, test_probabilities)
+    val_result = val_df.copy()
+    val_result["y_true"] = val_labels
+    val_result["y_prob"] = val_probabilities
+    return trainer, best_model, threshold, val_result
 
+
+def evaluate_fitted_backbone(
+    trainer: Trainer,
+    model: SpiralWaveClassifier,
+    test_df: pd.DataFrame,
+    config: dict[str, Any],
+    threshold: float,
+    preprocess_mode: PreprocessMode = "standard",
+) -> dict[str, Any]:
+    """Evaluate an already-fitted model (from fit_backbone) on a test set,
+    at a threshold already chosen on validation. Never re-picks the
+    threshold here: that would tune on the test set."""
+    preprocess_config = PreprocessConfig(size=config["image_size"], mode=preprocess_mode)
+    test_dataset = as_single_fold_dataset(test_df, preprocess_config, train=False)
+    test_loader = DataLoader(test_dataset, batch_size=config["batch_size"], shuffle=False)
+
+    test_probabilities = predict_probabilities(trainer, model, test_loader)
+    test_labels = np.array([1 if label == "parkinson" else 0 for label in test_df["label"]])
+    metrics = compute_metrics(test_labels, test_probabilities, threshold)
+    _, auc_lower, auc_upper = bootstrap_auc_ci(test_labels, test_probabilities)
+
+    return {
+        **metrics.as_dict(),
+        "auc_ci_lower": auc_lower,
+        "auc_ci_upper": auc_upper,
+        "y_true": test_labels.tolist(),
+        "y_prob": test_probabilities.tolist(),
+        "test_subject_id": test_df["subject_id"].tolist(),
+    }
+
+
+def train_one_backbone(
+    backbone_name: BackboneName,
+    train_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    config: dict[str, Any],
+    seed: int,
+    fold: int,
+    max_epochs: int,
+    pretrained: bool,
+    augment: bool | None = None,
+    freeze_epochs: int | None = None,
+    dinov2_mode: Dinov2Mode = "full_finetune",
+    preprocess_mode: PreprocessMode = "standard",
+) -> dict[str, Any]:
+    """Fit one backbone and evaluate it once on the test fold: the common
+    case, used by run_training and every ablation that does not need to
+    reuse a fitted model across multiple test sets (see fit_backbone and
+    evaluate_fitted_backbone for that case, used by
+    training/robustness.py)."""
+    trainer, best_model, threshold, val_result = fit_backbone(
+        backbone_name,
+        train_df,
+        config,
+        seed,
+        max_epochs,
+        pretrained,
+        augment=augment,
+        freeze_epochs=freeze_epochs,
+        dinov2_mode=dinov2_mode,
+        preprocess_mode=preprocess_mode,
+    )
+    evaluation = evaluate_fitted_backbone(
+        trainer, best_model, test_df, config, threshold, preprocess_mode=preprocess_mode
+    )
     return {
         "model": backbone_name,
         "fold": fold,
         "seed": seed,
-        **metrics.as_dict(),
-        "auc_ci_lower": auc_lower,
-        "auc_ci_upper": auc_upper,
+        **evaluation,
         "n_parameters": count_parameters(best_model.model),
         "cpu_latency_ms": measure_cpu_latency_ms(best_model.model, config["image_size"]),
-        "y_true": test_labels.tolist(),
-        "y_prob": test_probabilities.tolist(),
+        "val_true": val_result["y_true"].tolist(),
+        "val_prob": val_result["y_prob"].tolist(),
+        "val_subject_id": val_result["subject_id"].tolist(),
     }
 
 

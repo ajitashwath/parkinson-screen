@@ -232,6 +232,7 @@ wandb/
 
 # Node / frontend
 node_modules/
+frontend/*.tsbuildinfo
 frontend/.next/
 frontend/out/
 frontend/.turbo/

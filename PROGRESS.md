@@ -515,7 +515,34 @@ will need the GPU training run from Phase 3 to have happened first.
 
 ---
 
-## Phase 4: Experiments - not started
+## Phase 4: Experiments - in progress
+
+**Plan:**
+- `training/metrics.py`: add back `paired_bootstrap_comparison` (removed
+  from Phase 3's scope deliberately; this is where it belongs).
+- `training/data.py`: `SpiralWaveDataset` gets an explicit `augment`
+  parameter, decoupled from `train` (which still controls fold
+  filtering), so the augmentation ablation can build a "train split, no
+  augmentation" dataset.
+- `training/ablations.py`: pretrained vs scratch; augmentation vs none;
+  spiral only vs wave only vs fused (probability averaging and logistic
+  regression stacking, reporting honestly whether fusion helps); full
+  fine-tune vs frozen backbone vs DINOv2 linear probe; learning curve at
+  25/50/100% of training data. Reuses `training/train.py`'s
+  `train_one_backbone` for the actual training loop in every case.
+- `training/shortcut_check.py`: erase stroke pixels (threshold, fill with
+  local background) and train on background only, compared against
+  normal and `skeleton_rerender` preprocessing. Writes the finding
+  plainly either way.
+- `training/robustness.py`: blur, Gaussian noise, rotation, stroke
+  dilation/erosion, JPEG compression at 3 severities, applied to test
+  images only; evaluates an already-trained model at each severity level.
+- Every script writes tables and Plotly figures to `reports/`, accepts
+  `--config`, `--seed`, `--fast`, and reuses the same folds.
+
+**Done when:** every experiment runs in `--fast` mode and produces its
+tables and figures, and the code paths are covered by at least smoke
+tests.
 
 ## Phase 5: Explainability, export and registry - not started
 
@@ -523,7 +550,43 @@ will need the GPU training run from Phase 3 to have happened first.
 
 ## Phase 7: Backend (FastAPI) - not started
 
-## Phase 8: Frontend (Next.js) - not started
+## Phase 8: Frontend (Next.js) - done in development mode
+
+**Plan:**
+- Build a Next.js App Router frontend with strict TypeScript, Tailwind CSS, responsive navigation, a calm research-tool visual system, and a persistent screening disclaimer.
+- Implement `/`, `/draw`, `/result/[id]`, `/history`, and `/about` without depending on the not-yet-built FastAPI service.
+- Add a typed API adapter with a deterministic local mock mode, browser metadata storage, dynamic Plotly charts, and a clear switch to `NEXT_PUBLIC_API_URL`.
+- Verify the frontend with typecheck, ESLint, Vitest, a production build, and a route smoke test.
+
+**Built:**
+- Next.js 15 App Router scaffold in `frontend/` with `package.json`, `tsconfig.json`, Tailwind, ESLint, Vitest, standalone output, and environment documentation.
+- Responsive shared UI in `frontend/components/`: header, footer, disclaimer, status cards, metric cards, occlusion map, Plotly wrapper, delete control, and quality meter.
+- Pointer-event drawing canvas in `frontend/components/drawing-canvas.tsx`: spiral/wave templates, coalesced pointer samples, timing, pressure, pointer type, pen-lift markers, touch-action prevention, undo, clear, fixed black-on-white stroke, quality warnings, and PNG capture.
+- Pages in `frontend/app/`: landing overview, drawing studio, result review, personal history, and about/model-card pages.
+- Typed API and storage modules in `frontend/lib/`: result normalization, mock health/prediction/tremor data, device ID generation, metadata-only browser history, feature formatting, and API session deletion.
+- Result review includes probability dial, threshold uncertainty, occlusion map, feature report table, contribution chart, warnings, model version, provenance, and disclaimer.
+- History includes screening signal, personal first-session band, tremor-score trend, spiral-deviation trend, session log, and empty state. No population norms or fabricated user history are shown.
+- Added Vitest coverage for formatting, local storage, and deterministic mock responses.
+
+**Verified:**
+- `npm install` initially ended with registry `ECONNRESET`; retry with `npm install --prefer-offline --no-audit --no-fund` completed successfully and installed the dependency tree.
+- `npm run typecheck` - passed after the build-generated Next type files were available. A parallel typecheck/build attempt failed only because the build cleaned `.next` while `tsc` was reading it; the sequential rerun passed.
+- `npm run lint` - passed. Generated `frontend/next-env.d.ts` is excluded from ESLint.
+- `npm test` - 3 test files and 7 tests passed.
+- `npm run build` - passed; routes `/`, `/about`, `/draw`, `/history`, and dynamic `/result/[id]` were generated successfully.
+- Standalone server route smoke test on port 3101 - `/`, `/draw`, `/history`, `/about`, and `/result/demo-smoke` each returned HTTP 200.
+
+**Open:**
+- Phases 5 to 7 are not built, so the frontend currently uses a clearly labelled deterministic development adapter. Set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_USE_MOCK_API=false` after the backend contract is available.
+- A real browser walkthrough of pointer capture and Plotly interaction is still needed on a touchscreen, stylus, mouse, and mobile viewport.
+- `npm start` prints a Next warning because the project uses standalone output; Phase 9 deployment should launch the generated standalone server or remove standalone output for the chosen hosting target.
+
+**Assumptions:**
+- The frontend uses metadata-only browser persistence. Raw images and raw stroke points are not persisted by the frontend; the intended backend will store features and scores only.
+- Mock result values are visibly marked as a development preview and must not be reported as model metrics.
+- HandPD and NewHandPD are the planned research training sources; the UI makes no claim about browser data being part of those datasets.
+
+**Next:** Phase 9 deployment work can use this frontend, but Phase 7 backend integration should be completed first if live model results are required. Needs from you: nothing to start the frontend code; manual browser testing and the Phase 7 API contract are still needed for a fully connected demo.
 
 ## Phase 9: Docker, CI and deployment - not started
 

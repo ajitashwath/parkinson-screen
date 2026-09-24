@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import numpy as np
 
-from training.metrics import bootstrap_auc_ci, compute_metrics, select_threshold
+from training.metrics import (
+    bootstrap_auc_ci,
+    compute_metrics,
+    paired_bootstrap_comparison,
+    select_threshold,
+)
 
 
 def test_compute_metrics_perfect_classifier() -> None:
@@ -109,4 +114,41 @@ def test_bootstrap_auc_ci_is_deterministic_for_a_given_seed() -> None:
     y_prob = np.array([0.1, 0.3, 0.4, 0.6, 0.7, 0.9])
     first = bootstrap_auc_ci(y_true, y_prob, n_bootstrap=100, seed=7)
     second = bootstrap_auc_ci(y_true, y_prob, n_bootstrap=100, seed=7)
+    assert first == second
+
+
+def test_paired_bootstrap_comparison_identical_models_gives_zero_diff() -> None:
+    y_true = np.array([0] * 20 + [1] * 20)
+    y_prob = np.concatenate([np.linspace(0, 0.5, 20), np.linspace(0.5, 1, 20)])
+    result = paired_bootstrap_comparison(y_true, y_prob, y_prob, n_bootstrap=200, seed=0)
+    assert result["observed_diff"] == 0.0
+
+
+def test_paired_bootstrap_comparison_detects_large_clear_difference() -> None:
+    rng = np.random.default_rng(0)
+    y_true = np.array([0] * 40 + [1] * 40)
+    perfect_prob = np.concatenate([np.zeros(40), np.ones(40)])
+    random_prob = rng.uniform(0, 1, size=80)
+    result = paired_bootstrap_comparison(y_true, perfect_prob, random_prob, n_bootstrap=500, seed=0)
+    assert result["observed_diff"] > 0.3
+    assert result["p_value"] < 0.05
+
+
+def test_paired_bootstrap_comparison_small_difference_not_significant() -> None:
+    rng = np.random.default_rng(3)
+    y_true = np.array([0] * 15 + [1] * 15)
+    base_prob = np.concatenate([rng.uniform(0.2, 0.6, 15), rng.uniform(0.4, 0.8, 15)])
+    nearly_identical_prob = base_prob + rng.normal(0, 0.01, size=30)
+    result = paired_bootstrap_comparison(
+        y_true, base_prob, nearly_identical_prob, n_bootstrap=500, seed=3
+    )
+    assert result["p_value"] > 0.05
+
+
+def test_paired_bootstrap_comparison_is_deterministic_for_a_given_seed() -> None:
+    y_true = np.array([0, 0, 0, 1, 1, 1])
+    y_prob_a = np.array([0.1, 0.3, 0.4, 0.6, 0.7, 0.9])
+    y_prob_b = np.array([0.2, 0.2, 0.5, 0.5, 0.6, 0.8])
+    first = paired_bootstrap_comparison(y_true, y_prob_a, y_prob_b, n_bootstrap=100, seed=5)
+    second = paired_bootstrap_comparison(y_true, y_prob_a, y_prob_b, n_bootstrap=100, seed=5)
     assert first == second
