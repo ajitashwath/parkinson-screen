@@ -1,0 +1,43 @@
+# Research / training stack. Never installed into the backend Docker image.
+# CPU-only smoke runs are supported via each script's --fast flag; GPU runs
+# happen on Colab or Kaggle notebooks per HANDOFF.md.
+
+# Core deep learning
+torch==2.4.1
+torchvision==0.19.1
+pytorch-lightning==2.4.0
+timm==1.0.9
+transformers==4.44.2
+
+# Classical ML and image processing
+scikit-learn==1.5.1
+scikit-image==0.24.0
+opencv-python-headless==4.10.0.84
+pytorch-grad-cam==1.5.4
+imagehash==4.3.1
+
+# Experiment tracking
+wandb==0.17.7
+mlflow==2.15.1
+
+# Numerics, config and reporting
+numpy==1.26.4
+pandas==2.2.2
+scipy==1.14.0
+PyYAML==6.0.2
+Pillow==10.4.0
+plotly==5.23.0
+
+# Tremor analysis and LightGBM
+lightgbm==4.5.0
+shap==0.46.0
+
+# ONNX export and parity checks
+onnx==1.16.2
+onnxruntime==1.19.0
+
+# Dev tools (lint, type check, test)
+ruff==0.6.2
+mypy==1.11.1
+pytest==8.3.2
+pytest-cov==5.0.0

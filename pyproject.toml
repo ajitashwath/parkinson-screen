@@ -1,0 +1,31 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+    "data",
+    "frontend",
+    "reports",
+    "mlruns",
+    "wandb",
+    ".venv",
+    "venv",
+    "node_modules",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E203"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["common", "training", "tremor", "backend"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+exclude = "^(data|frontend|reports|mlruns|wandb|\\.venv|venv|node_modules)/"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

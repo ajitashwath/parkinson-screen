@@ -216,3 +216,31 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project data: never commit raw or processed images
+data/raw/
+data/processed/
+
+# Experiment tracking
+mlruns/
+wandb/
+
+# Model checkpoints (small exported models under backend/models/ are tracked)
+*.ckpt
+*.pt
+*.pth
+
+# Node / frontend
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/next-env.d.ts
+
+# Local database
+*.db
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
