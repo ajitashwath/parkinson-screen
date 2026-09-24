@@ -138,3 +138,63 @@ Defaults picked when the spec in `CLAUDE.md` left something ambiguous, and why.
   it, and there is no substitute, since the entire point is validating the
   feature extractor against a known frequency that only a generator can
   supply.
+
+## Phase 3
+
+- **Single-logit binary classification (`BCEWithLogitsLoss` on one output),
+  not a 2-class softmax head.** The product only ever needs one
+  probability (the screening score); a single logit is simpler to carry
+  through metrics, ONNX export (Phase 5) and the backend response than a
+  2-class head would be, and is mathematically equivalent for a binary
+  problem. Recorded since `CLAUDE.md` allows either ("2-class (or
+  single-logit) head").
+- **`vit_small` uses timm, not Transformers.** `CLAUDE.md` allows either
+  "whichever loads reliably"; timm was chosen for consistency with the
+  other three CNN/ViT backbones (`resnet50`, `efficientnet_b0`,
+  `convnext_tiny`, all timm) and simpler pretrained-weight handling (one
+  `create_model` call, no separate image processor object).
+  `dinov2_small` uses Transformers specifically, per `CLAUDE.md`.
+- **`--fast` loops over every backbone plus the baseline, ignoring the
+  config's own `backbone` field**, rather than training only the one
+  backbone named in `configs/train_resnet50.yaml`. The Makefile's
+  `train-fast` target (fixed in Phase 0) calls `training.train --fast
+  --config configs/train_resnet50.yaml` once; the Phase 3 done-criterion
+  is that this one command exercises every backbone and the baseline, so
+  `--fast` reinterprets "which model" as "all of them, briefly" rather
+  than reading it from the config. A real (non-fast) run trains the one
+  backbone the config names, once per real fold and seed.
+- **`--fast` re-samples a small per-class subset from the real
+  HandPD/NewHandPD data and re-assigns fresh folds on that subset**,
+  rather than reusing the full dataset's precomputed fold column after
+  sampling. The first version sampled globally then filtered by the
+  original fold number, which could (and did, empirically) leave the
+  single fast-mode test fold with only one class present, making
+  ROC-AUC undefined. Verified robust across 10 seeds after the fix; see
+  `docs/DECISIONS.md`.
+- **`split_train_val`'s internal `n_splits` is capped at the smallest
+  class's sample count**, not just at `round(1 / val_fraction)`.
+  `StratifiedGroupKFold` cannot stratify past the smallest class's count
+  and warns loudly instead; this matters most for `--fast` mode's tiny
+  per-fold samples, where the uncapped default (5, for `val_fraction:
+  0.2`) could exceed the available minority-class count.
+  `bootstrap_auc_ci` and `select_threshold` already degrade gracefully
+  (NaN / nearest-available) rather than crashing on small samples, so
+  only this one call site needed the fix.
+- **Lightning checkpoints are written to a `tempfile.TemporaryDirectory`
+  that is deleted immediately after loading the best epoch**, not kept
+  under a persistent `checkpoints/` directory. They are working state for
+  picking the best epoch, not a deliverable of any single fold or
+  `--fast` run (Phase 5's `export_onnx.py` saves the actual champion
+  model); keeping every fold's checkpoint around serves no purpose and
+  cost real disk space during development (see below).
+- **`TEMP`/`TMP` were pointed at a folder on the `E:` drive
+  (`E:\parkinson-screen\.tmp`) when running training locally on this
+  machine**, because the system default (`C:\Users\...\AppData\Local\Temp`)
+  sits on a drive with under 2 GB free, a pre-existing condition on this
+  machine unrelated to this project (its own drive, `E:`, has over 10 GB
+  free). Checkpoint saving failed with `OSError: No space left on device`
+  before this was set, even though the checkpoint's own target directory
+  had plenty of room, because an intermediate write landed on `C:` first.
+  This is a local environment workaround, not a code change: `make
+  train-fast` and CI both still work unmodified on a machine whose default
+  temp directory has room.

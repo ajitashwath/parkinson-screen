@@ -1,0 +1,25 @@
+# Training config. --fast ignores `backbone` and loops over every
+# backbone plus the baseline instead (see training/train.py docstring).
+backbone: resnet50
+pretrained: true
+seed: 42
+seeds: [42, 43, 44]
+
+n_folds: 5
+val_fraction: 0.2
+target_sensitivity: 0.9
+
+max_epochs: 15
+patience: 3
+batch_size: 16
+head_lr: 0.0001
+backbone_lr: 0.00001
+freeze_epochs: 2
+label_smoothing: 0.05
+
+image_size: 224
+fast_sample_per_class: 6
+
+folds_path: data/folds.csv
+results_path: reports/training_results.json
+mlruns_dir: mlruns

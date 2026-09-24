@@ -1,0 +1,7 @@
+model,accuracy_mean,sensitivity_mean,specificity_mean,precision_mean,f1_mean,roc_auc_mean,pr_auc_mean,brier_score_mean,cpu_latency_ms_mean,accuracy_std,sensitivity_std,specificity_std,precision_std,f1_std,roc_auc_std,pr_auc_std,brier_score_std,cpu_latency_ms_std,n_parameters,n_runs
+hog_svm_baseline,0.2,0.0,1.0,,,1.0,1.0,0.3079000049271295,19.728459999896586,,,,,,,,,,-1,1
+convnext_tiny,0.2,0.0,1.0,,,0.5,0.8875,0.18910593482222424,114.98356000010972,,,,,,,,,,27820897,1
+efficientnet_b0,0.2,0.0,1.0,,,0.5,0.8875,0.23882462722667058,83.72508999964339,,,,,,,,,,4008829,1
+resnet50,0.2,0.0,1.0,,,0.5,0.8875,0.2504471423280661,146.1394999998447,,,,,,,,,,23510081,1
+vit_small,0.2,0.0,1.0,,,0.5,0.8875,0.24238649220281944,89.96194999999716,,,,,,,,,,21666049,1
+dinov2_small,0.2,0.0,1.0,,,0.25,0.8041666666666667,0.3851353923872088,132.99791000026744,,,,,,,,,,22056961,1

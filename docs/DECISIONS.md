@@ -68,3 +68,12 @@ do not silently contradict earlier ones.
   this project does not have. See `docs/ASSUMPTIONS.md` for the full
   reasoning and the signal-processing decisions this phase needed to
   actually hit the required 0.5 Hz recovery accuracy.
+
+## Phase 3
+
+- **`--fast` trains real HandPD/NewHandPD images (a small sampled
+  subset), not synthetic ones**, consistent with the same real-data
+  direction from Phase 1. The only exception anywhere in this project
+  remains Phase 2's tremor synthetic generator, which has no real-data
+  substitute. Full reasoning for the `--fast` design (looping over every
+  backbone, re-sampling then re-folding) in `docs/ASSUMPTIONS.md`.

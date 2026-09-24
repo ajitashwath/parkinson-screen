@@ -28,6 +28,11 @@ from sklearn.model_selection import StratifiedGroupKFold
 
 from common.preprocess import PreprocessConfig, preprocess_image
 
+try:
+    from torch.utils.data import Dataset as _TorchDataset
+except ImportError:  # training/data.py's manifest and fold functions do not need torch
+    _TorchDataset = object  # type: ignore[assignment, misc]
+
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
 DRAWING_KINDS = ("spiral", "wave")
 LABELS = ("healthy", "parkinson")
@@ -213,7 +218,7 @@ def build_train_augmentation() -> Any:
     )
 
 
-class SpiralWaveDataset:
+class SpiralWaveDataset(_TorchDataset):
     """torch.utils.data.Dataset over a fold-assigned manifest. Applies
     common.preprocess.preprocess_image, then, on train folds only, the
     augmentation from build_train_augmentation. Imports torch lazily so

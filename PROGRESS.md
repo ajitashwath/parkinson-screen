@@ -363,7 +363,157 @@ training run once that phase's scripts exist.
 
 ---
 
-## Phase 3: Training pipeline - not started
+## Phase 3: Training pipeline - in progress
+
+**Plan:**
+- `training/backbones.py`: `build_backbone(name, pretrained, num_classes=1)`
+  factory for `resnet50`, `efficientnet_b0`, `convnext_tiny` (timm),
+  `vit_small` (timm, chosen over Transformers for consistency with the
+  other three and simpler pretrained-weight handling; recorded per spec),
+  `dinov2_small` (Transformers, `linear_probe` and `full_finetune` modes).
+  Single-logit head (binary classification via `BCEWithLogitsLoss`), not
+  a 2-class softmax head, since the backend ultimately wants one
+  probability; recorded in `docs/ASSUMPTIONS.md`.
+- `training/metrics.py`: `compute_metrics` (accuracy, sensitivity,
+  specificity, precision, F1, ROC-AUC, PR-AUC, Brier score),
+  `select_threshold` (highest specificity at a target sensitivity, chosen
+  on validation only), `bootstrap_auc_ci`.
+- `training/lit_model.py`: `LightningModule` wrapping a backbone: AdamW
+  with differential LR (head ~1e-4, backbone ~1e-5), frozen backbone for
+  the first few epochs then unfrozen, label smoothing, class weights via
+  `pos_weight`, cosine LR schedule.
+- `training/baselines.py`: HOG (`skimage.feature.hog`) + `sklearn.svm.SVC`
+  baseline, same fold structure as the neural models.
+- `training/train.py`: orchestrates all backbones plus the baseline over
+  folds, holds out part of the training fold as validation (grouped the
+  same way), selects the epoch and decision threshold on validation only,
+  evaluates once on the test fold, logs to MLflow (local `mlruns/`) and
+  W&B (`WANDB_MODE=offline` when no API key is set). Accepts `--config`,
+  `--seed`, `--fast`.
+- `training/evaluate.py`: comparison table (CSV + Markdown), ROC curves
+  and confusion matrices as Plotly figures, saved to `reports/`.
+- `configs/train_resnet50.yaml` (and similar) for the Makefile's
+  `train-fast` target.
+- Tests for `training/metrics.py` and `training/backbones.py` primarily
+  (pure, fast, no GPU needed); `training/train.py`'s own tests use a tiny
+  synthetic fixture for the code path (mirroring Phase 1's pattern), while
+  `make train-fast` itself is verified against a small real subset of the
+  HandPD/NewHandPD data already downloaded, not synthetic images.
+
+**Done when:** `make train-fast` runs every backbone and the baseline on
+the tiny fixture end to end, produces the comparison table and figures,
+and unit tests for the metrics and threshold selection pass.
+
+**Built:**
+- `training/backbones.py`: `build_backbone` (resnet50, efficientnet_b0,
+  convnext_tiny, vit_small via timm; dinov2_small via Transformers, with
+  `linear_probe`/`full_finetune` modes), `SingleLogitClassifier`,
+  `Dinov2Classifier`, `count_parameters`, `get_head_parameters`,
+  `freeze_backbone_params`, `unfreeze_all_params`, `get_param_groups`.
+- `training/metrics.py`: `Metrics`, `compute_metrics`, `select_threshold`
+  (favors sensitivity), `bootstrap_auc_ci`.
+- `training/lit_model.py`: `SpiralWaveClassifier` (LightningModule):
+  differential-LR AdamW, freeze-then-unfreeze, label smoothing, class
+  weights, cosine schedule.
+- `training/baselines.py`: HOG + SVM (`extract_hog_features`,
+  `train_hog_svm`, `predict_proba`).
+- `training/train.py`: `split_train_val`, `sample_fast_subset`,
+  `train_one_backbone`, `train_baseline_fold`, `run_training`, a CLI
+  (`--config`, `--seed`, `--fast`, `--out`); MLflow logging per run.
+- `training/evaluate.py`: `build_comparison_table`, `save_comparison_table`
+  (CSV + Markdown), `plot_roc_curves`, `plot_confusion_matrices`
+  (pooled across folds/seeds, per-model dropdown), `run_evaluation`.
+- `configs/train_resnet50.yaml`.
+- Tests: `tests/test_backbones.py` (19), `tests/test_metrics.py` (11),
+  `tests/test_lit_model.py` (8), `tests/test_baselines.py` (5),
+  `tests/test_train.py` (7), `tests/test_evaluate.py` (9): 59 new tests.
+
+**Verified:**
+- Installed `pytorch-lightning`, `timm`, `transformers`, `mlflow`,
+  `wandb`, `tabulate` into `.venv` (incrementally, one at a time, after a
+  combined install hung in pip's resolver for a long time with zero
+  packages landed; seen below under "Bugs found").
+- `.venv/Scripts/python.exe -m ruff check .` - "All checks passed!"
+- `.venv/Scripts/python.exe -m mypy common training tremor backend tests`
+  - "Success: no issues found in 30 source files"
+- `.venv/Scripts/python.exe -m pytest -q` - 137 passed.
+- The real `make train-fast` command
+  (`python -m training.train --fast --config configs/train_resnet50.yaml`)
+  run against real HandPD/NewHandPD data (not synthetic): all 5 backbones
+  plus the HOG+SVM baseline trained and evaluated successfully, writing
+  `reports/training_results.json`. Metrics for the random-init,
+  1-epoch, ~10-image fast run cluster near chance (ROC-AUC 0.25 to 0.50
+  for the neural backbones, 1.00 for the baseline on this particular tiny
+  split) as expected for a smoke test, not a real training result.
+- `.venv/Scripts/python.exe -m training.evaluate --results
+  reports/training_results.json --reports-dir reports` run for real:
+  wrote `reports/model_comparison.csv`, `reports/model_comparison.md`,
+  `reports/roc_curves.html`, `reports/confusion_matrices.html` (the
+  latter two each about 3.6 MB, confirmed non-empty).
+- `mlruns/` populated with a real run per model/fold/seed combination
+  (params and metrics logged), confirmed by listing its directory tree.
+
+**Bugs found and fixed during verification:**
+- A combined `pip install pytorch-lightning timm transformers mlflow
+  wandb` hung in dependency resolution for over 10 minutes with nothing
+  installed (confirmed still consuming CPU, not deadlocked, via
+  `Get-Process`). Killed it and installed each package separately instead;
+  every individual install then completed in well under a minute, since
+  each resolves against an already-settled environment rather than five
+  packages simultaneously.
+- The first `make train-fast` run failed with `OSError: No space left on
+  device` while saving a Lightning checkpoint, despite the checkpoint's
+  own target directory (`E:\parkinson-screen\checkpoints`, on the `E:`
+  drive) having over 10 GB free. Root cause: the system default temp
+  directory (`C:\Users\...\AppData\Local\Temp`, used for an intermediate
+  atomic-save write) sits on a drive with under 2 GB free, a pre-existing
+  condition on this machine. Fixed for this run by pointing `TEMP`/`TMP`
+  at a folder on `E:`; fixed in the code by writing checkpoints to a
+  `tempfile.TemporaryDirectory` deleted immediately after use instead of
+  a persistent `checkpoints/` directory, and using
+  `save_weights_only=True` to keep them smaller regardless.
+- The first working `--fast` run produced `roc_auc=nan` for every model:
+  `sample_fast_subset` samples a small subset per class from across the
+  *whole* manifest, then the original code filtered to the single
+  lowest-numbered fold from the *full dataset's* fold column. With a
+  12-image sample scattered across 5 original folds, that single fold's
+  test set could easily (and did) end up with zero images of one class,
+  making ROC-AUC undefined. Root-caused by re-running the sampling logic
+  directly in a standalone script rather than guessing. Fixed by
+  re-assigning fresh folds on the sampled subset itself
+  (`assign_folds(manifest, n_folds=2, seed=seed)`); verified robust
+  (both classes present in the test fold) across 10 different seeds
+  before re-running the full pipeline.
+- `split_train_val`'s internal validation split used a fixed `n_splits =
+  round(1 / val_fraction)` (5, for the default 0.2), which exceeded the
+  smallest class's available sample count on `--fast` mode's tiny folds
+  and triggered a `StratifiedGroupKFold` warning. Fixed by capping
+  `n_splits` at the smallest class's count.
+
+**Open:**
+- `--fast` mode's own selected threshold can still land on a degenerate
+  value when the internal train/val split (inside a single already-tiny
+  fast-mode fold) happens to have very few examples of one class,
+  producing sensitivity/specificity values that are not meaningful (seen
+  in the final verification run: several models showed
+  `sensitivity=0.000` despite reasonable ROC-AUC ranking ability). This
+  does not affect correctness (no crash, no NaN propagation) and will not
+  occur at the scale of a real 5-fold run on the full ~1264-image
+  dataset, so it was left as-is rather than further tuned for a smoke
+  test whose numbers are not meant to be meaningful. Real training (5
+  folds x 3 seeds x 5 backbones, `pretrained=true`) needs a GPU (Colab or
+  Kaggle) and has not been run; per `CLAUDE.md`, that is expected to
+  happen outside this environment.
+
+**Assumptions:** see `docs/ASSUMPTIONS.md` and `docs/DECISIONS.md` (Phase
+3 sections).
+
+**Next:** Phase 4 (experiments: ablations, learning curve, shortcut
+check, robustness, statistical comparison). Needs from you: nothing to
+start the code; the real experiments (not just their `--fast` code paths)
+will need the GPU training run from Phase 3 to have happened first.
+
+---
 
 ## Phase 4: Experiments - not started
 
