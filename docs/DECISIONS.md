@@ -17,3 +17,42 @@ do not silently contradict earlier ones.
   `mlruns/` and `wandb/`.** Those hold generated artifacts, JS/TS code (its
   own ESLint/tsc will cover it from Phase 8), or third-party output, not
   first-party Python.
+
+## Phase 1 (revised after Phase 1 was first committed)
+
+- **Claude Code downloaded real datasets directly, superseding the
+  original `HANDOFF.md`-style plan of leaving all downloads to the user.**
+  `CLAUDE.md`'s own "Things you must do yourself" section originally listed
+  dataset downloads under things Claude Code cannot do, largely because
+  Kaggle requires an account and login. After Phase 1 was committed with
+  only synthetic test fixtures, the user explicitly asked for real data to
+  be researched and integrated. Claude Code researched available sources
+  and found HandPD and NewHandPD (UNESP, Botucatu Medical School) served
+  directly over plain HTTP with no login, account, or request form, so
+  downloading them does not conflict with the standing rule against
+  creating accounts or entering credentials. The user was shown the exact
+  files, source, and total size (about 340 MB) and confirmed before any
+  download happened. This does not extend to Kaggle's "Parkinson's
+  Drawings" dataset or any other source that requires an account: those
+  remain the user's own task, per `data/README.md`.
+- **Subject IDs now come from a `metadata.csv` mechanism in
+  `training/data.py`, checked before falling back to a caller-supplied
+  filename regex.** The original plan was to build that `metadata.csv`
+  straight from HandPD's and NewHandPD's own published CSVs
+  (`ID_PATIENT` column). After downloading the real archives, both turned
+  out to be unusable for this: HandPD's `Spiral_HandPD.csv` /
+  `Meander_HandPD.csv` are plain LibOPF feature exports with no image name
+  or patient ID column at all, despite the dataset page describing richer
+  ones, and NewHandPD's `NewSpiral.csv` has a publishing bug where every
+  patient row's `IMAGE_NAME` points at a meander file regardless of which
+  CSV it is in (confirmed by joining the CSV against the real archive:
+  zero of 124 real patient spiral filenames appear in it), and its
+  `ID_PATIENT` overlaps between the healthy and patient classes. Both
+  archives instead encode a real, dataset-native subject code directly in
+  every filename with no exceptions (`0068-1.jpg` for HandPD, `sp1-H9.jpg`
+  / `mea1-H9.jpg` for NewHandPD, verified to agree across the spiral and
+  meander archives for the same person). `training/prepare_handpd.py`
+  derives `subject_id` from the filename instead of the CSVs and writes
+  `data/raw/<dataset>/metadata.csv` from that. The `metadata.csv`
+  mechanism itself in `training/data.py` stays general (any future dataset
+  can supply one), only HandPD's own derivation changed.

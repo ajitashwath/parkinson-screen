@@ -3,10 +3,14 @@ augmentation for spiral and wave drawings.
 
 Reads whatever dataset layout is present under data/raw/, in the form
 data/raw/<dataset>/<spiral|wave>/<healthy|parkinson>/*.png, per CLAUDE.md
-Phase 1. Subject IDs are not assumed: extract_subject_id only recognizes a
-pattern the caller configures explicitly (configs/data.yaml
-subject_id_regex), since guessing a naming convention for a dataset not yet
-downloaded would violate CLAUDE.md rule 2.
+Phase 1. Subject IDs come from one of two places, in priority order: an
+optional data/raw/<dataset>/metadata.csv (kind, image_name, subject_id)
+sourced from the dataset's own published metadata when one exists (see
+training/prepare_handpd.py for how HandPD's original CSVs are normalized
+into this form), or a caller-supplied regex on the filename
+(configs/data.yaml subject_id_regex) for datasets that encode the subject
+in the filename itself. Neither is guessed: a dataset with no metadata.csv
+and no working regex yields subject_id = None, per CLAUDE.md rule 2.
 """
 
 from __future__ import annotations
@@ -28,6 +32,8 @@ IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
 DRAWING_KINDS = ("spiral", "wave")
 LABELS = ("healthy", "parkinson")
 MANIFEST_COLUMNS = ["path", "dataset", "kind", "label", "subject_id", "image_hash"]
+METADATA_FILENAME = "metadata.csv"
+METADATA_REQUIRED_COLUMNS = {"kind", "image_name", "subject_id"}
 
 
 @dataclass(frozen=True)
@@ -58,6 +64,26 @@ def compute_image_hash(path: Path, hash_size: int = 8) -> str:
         return str(imagehash.phash(image.convert("L"), hash_size=hash_size))
 
 
+def load_subject_metadata(dataset_dir: Path) -> dict[tuple[str, str], str]:
+    """Load an optional dataset/metadata.csv (columns: kind, image_name,
+    subject_id) giving exact subject IDs sourced from the dataset's own
+    published metadata, keyed by (kind, image filename). Returns an empty
+    dict, not an error, when the dataset has no metadata.csv: most datasets
+    will not have one, and that is the normal case handled by the
+    subject_id_regex fallback in discover_images."""
+    metadata_path = dataset_dir / METADATA_FILENAME
+    if not metadata_path.exists():
+        return {}
+    metadata = pd.read_csv(metadata_path, dtype=str)
+    missing = METADATA_REQUIRED_COLUMNS - set(metadata.columns)
+    if missing:
+        raise ValueError(f"{metadata_path} is missing required columns: {sorted(missing)}")
+    return {
+        (row["kind"], row["image_name"]): row["subject_id"]
+        for row in metadata.to_dict("records")
+    }
+
+
 def discover_images(
     raw_dir: str | Path,
     subject_id_regex: str | None = None,
@@ -75,6 +101,7 @@ def discover_images(
         )
     records: list[dict[str, Any]] = []
     for dataset_dir in sorted(p for p in raw_path.iterdir() if p.is_dir()):
+        metadata_lookup = load_subject_metadata(dataset_dir)
         for kind in DRAWING_KINDS:
             kind_dir = dataset_dir / kind
             if not kind_dir.exists():
@@ -86,13 +113,16 @@ def discover_images(
                 for image_path in sorted(label_dir.iterdir()):
                     if image_path.suffix.lower() not in IMAGE_EXTENSIONS:
                         continue
+                    subject_id = metadata_lookup.get((kind, image_path.name))
+                    if subject_id is None:
+                        subject_id = extract_subject_id(image_path.name, subject_id_regex)
                     records.append(
                         {
                             "path": str(image_path),
                             "dataset": dataset_dir.name,
                             "kind": kind,
                             "label": label,
-                            "subject_id": extract_subject_id(image_path.name, subject_id_regex),
+                            "subject_id": subject_id,
                             "image_hash": compute_image_hash(image_path, phash_size),
                         }
                     )

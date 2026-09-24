@@ -175,6 +175,90 @@ correct):**
 
 **Assumptions:** see `docs/ASSUMPTIONS.md` (Phase 1 section).
 
+---
+
+## Phase 1 addendum: real dataset integration
+
+After the above was committed, the user explicitly asked for real data to
+be researched and integrated rather than left as a `data/README.md`
+instruction for later. Full reasoning in `docs/DECISIONS.md`.
+
+**Built:**
+- `training/prepare_handpd.py`: downloads-to-canonical-layout ETL for
+  HandPD and NewHandPD. `is_junk_member` filters macOS `.DS_Store` and
+  AppleDouble `._*` sidecar files that share the real `.jpg` extension and
+  would otherwise be picked up as images. `extract_subject_id` pulls the
+  dataset-native subject code straight from each filename.
+  `prepare_handpd`/`prepare_newhandpd` extract the zip archives, sort
+  images into `<spiral|wave>/<healthy|parkinson>/`, and write
+  `metadata.csv`.
+- `tests/test_prepare_handpd.py`: 12 tests against tiny synthetic
+  in-memory zip fixtures (junk filtering, subject ID regexes, archive
+  extraction, control/patient path-based labeling).
+- Rewrote `data/README.md` to describe what was actually downloaded, exact
+  reproduction commands, and the CSV bugs found (below).
+- Regenerated `docs/DATASHEET.md` and `data/folds.csv` for real, from real
+  data.
+- Improved `render_datasheet_markdown` and the CLI's own print in
+  `training/audit_data.py` to summarize image sizes (761 distinct sizes in
+  the real data) instead of dumping every one, and to explain, when folds
+  are subject-grouped, why a high duplicate-hash count is expected and not
+  a leakage risk (repeated attempts of the same printed template hash as
+  near-identical).
+
+**Verified:**
+- Downloaded HandPD (`Spiral_HandPD.zip`, `Meander_HandPD.zip`,
+  132 MB + 90 MB) and NewHandPD (4 zips, 116 MB) from
+  `wwwp.fc.unesp.br` after explicit user confirmation of the exact files,
+  source and size. Every file's size matched the server's `Content-Length`
+  exactly after a resume (`curl -C -`) following a `--max-time` truncation
+  on the first attempt.
+  `.venv/Scripts/python.exe -m training.prepare_handpd --downloads-dir
+  data/raw/_downloads --out-dir data/raw` - wrote 736 HandPD images and
+  528 NewHandPD images, matching the dataset page's stated counts (92
+  subjects x 4 spiral + 4 meander = 736; 66 subjects x 4 + 4, minus the
+  macOS junk files, = 528).
+  `.venv/Scripts/python.exe -m training.audit_data --config
+  configs/data.yaml --seed 42` on the real combined data - 1264 images,
+  `fold_method: grouped_by_subject_id`, `subject_ids_available: True`.
+  Verified in a one-off script that of 158 unique subjects across both
+  datasets, 0 span more than one fold.
+- `.venv/Scripts/python.exe -m ruff check .` - "All checks passed!"
+- `.venv/Scripts/python.exe -m mypy common training tremor backend tests`
+  - "Success: no issues found in 13 source files"
+- `.venv/Scripts/python.exe -m pytest -q` - 52 passed.
+
+**Bugs found and fixed during verification:**
+- The first download attempt used `curl --max-time 300`, too short for
+  the 132 MB `Spiral_HandPD.zip` on this slow server; it failed at 67 MB
+  (`curl` exit 28, timeout). Resumed with `curl -C - --max-time 1800`.
+- HandPD's own `Spiral_HandPD.csv` / `Meander_HandPD.csv`, which the
+  dataset page describes as having `IMAGE_NAME` and `ID_PATIENT` columns,
+  turned out on inspection to be plain LibOPF feature exports
+  (`368,2,9` header, i.e. sample/class/feature counts, no names or IDs at
+  all). Caught by actually loading the file with pandas instead of trusting
+  the page's description.
+- NewHandPD's `NewSpiral.csv` has a publishing bug: joining its
+  `IMAGE_NAME` column against the real extracted archive contents showed
+  zero of the 124 real patient spiral filenames appear in it (every patient
+  row's `IMAGE_NAME` instead points at a meander file), and its
+  `ID_PATIENT` has 2 values shared between the healthy and patient classes,
+  which a real per-class code should not have. Caught by the same
+  join-against-real-files check, not assumed from the CSV alone.
+  `training/prepare_handpd.py` was written to derive `subject_id` from
+  each archive's own filename convention instead (verified consistent
+  across the spiral and meander archives for every subject, with zero
+  healthy/patient collisions), bypassing both CSV problems entirely.
+- The first version of `render_datasheet_markdown` dumped every distinct
+  image size as one long comma-separated line; real scanned data produced
+  761 distinct sizes, an unreadable ~3000-character line. Changed to a
+  width/height range summary once there are more than 12 distinct sizes.
+
+**Open:** none.
+
+**Assumptions:** see `docs/ASSUMPTIONS.md` and `docs/DECISIONS.md` (Phase 1
+sections).
+
 **Next:** Phase 2 (tremor analysis package). Needs from you: nothing to
 start the code.
 

@@ -48,13 +48,16 @@ Defaults picked when the spec in `CLAUDE.md` left something ambiguous, and why.
 
 ## Phase 1
 
-- **`subject_id_regex` defaults to `null` in `configs/data.yaml`.** No
-  downloaded dataset's real filename convention is known yet, and
-  `CLAUDE.md` rule 2 forbids inventing one. `extract_subject_id` only
-  extracts a subject ID when the caller supplies a working regex; until
-  then, `assign_folds` always uses the image-hash fallback and
-  `docs/DATASHEET.md` will report the leakage caveat loudly, exactly as the
-  phase spec requires.
+- **`subject_id_regex` defaults to `null` in `configs/data.yaml`, and stays
+  `null` even after real data was integrated.** `extract_subject_id` only
+  extracts a subject ID when the caller supplies a working regex; without
+  one, `assign_folds` uses the image-hash fallback and `docs/DATASHEET.md`
+  reports the leakage caveat loudly, exactly as the phase spec requires.
+  HandPD and NewHandPD (added after Phase 1 was first committed; see
+  `docs/DECISIONS.md`) get real subject IDs through the separate
+  `metadata.csv` mechanism instead, built by
+  `training/prepare_handpd.py` from each archive's filename convention, so
+  `subject_id_regex` was never needed for them specifically.
 - **A row counts as having a usable subject ID only if every row in the
   manifest has one and there is more than one distinct subject.** A
   partially-populated subject_id column would silently leave some rows

@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
 
+import training.data as data_module
 from training.data import (
     assign_folds,
     compute_image_hash,
     discover_images,
     extract_subject_id,
     has_usable_subject_ids,
+    load_subject_metadata,
     save_folds_csv,
     summarize,
 )
@@ -57,6 +60,41 @@ def test_extract_subject_id_uses_supplied_pattern() -> None:
 
 def test_extract_subject_id_returns_none_on_no_match() -> None:
     assert extract_subject_id("unrelated_name.png", pattern=r"^(P\d+)_") is None
+
+
+def test_load_subject_metadata_returns_empty_dict_when_absent(tmp_path: Path) -> None:
+    assert load_subject_metadata(tmp_path) == {}
+
+
+def test_load_subject_metadata_reads_kind_image_subject_columns(tmp_path: Path) -> None:
+    (tmp_path / "metadata.csv").write_text(
+        "kind,image_name,subject_id,extra_column\nspiral,healthy_00.png,S001,ignored\n",
+        encoding="utf-8",
+    )
+    lookup = load_subject_metadata(tmp_path)
+    assert lookup == {("spiral", "healthy_00.png"): "S001"}
+
+
+def test_load_subject_metadata_raises_on_missing_columns(tmp_path: Path) -> None:
+    (tmp_path / "metadata.csv").write_text(
+        "kind,image_name\nspiral,healthy_00.png\n", encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="missing required columns"):
+        load_subject_metadata(tmp_path)
+
+
+def test_discover_images_prefers_metadata_csv_over_regex(tmp_path: Path) -> None:
+    raw_dir = tmp_path / "raw"
+    dataset_dir = raw_dir / "handpd_like" / "spiral" / "healthy"
+    dataset_dir.mkdir(parents=True)
+    (dataset_dir / "S001_01.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+    (raw_dir / "handpd_like" / "metadata.csv").write_text(
+        "kind,image_name,subject_id\nspiral,S001_01.png,FROM_METADATA\n", encoding="utf-8"
+    )
+    # a regex is also supplied, but the metadata.csv value must win
+    with patch.object(data_module, "compute_image_hash", return_value="fakehash"):
+        manifest = discover_images(raw_dir, subject_id_regex=r"^(S\d+)_")
+    assert manifest.loc[0, "subject_id"] == "FROM_METADATA"
 
 
 def test_has_usable_subject_ids_false_when_all_none() -> None:

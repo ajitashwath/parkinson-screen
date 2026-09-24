@@ -95,16 +95,40 @@ def render_datasheet_markdown(summary: dict, fold_method: str, n_folds: int, see
     ]
     for key, count in sorted(summary["counts_by_dataset"].items()):
         lines.append(f"| {key} | {count} |")
+    sizes = summary["image_sizes"]
+    lines += ["", "## Image sizes observed", ""]
+    if not sizes:
+        lines.append("none")
+    elif len(sizes) <= 12:
+        lines.append(", ".join(f"{w}x{h}" for w, h in sizes))
+    else:
+        widths = [w for w, _ in sizes]
+        heights = [h for _, h in sizes]
+        lines += [
+            f"- {len(sizes)} distinct sizes across {summary['total_images']} images"
+            " (scanned paper forms, so sizes vary per scan rather than being fixed).",
+            f"- Width range: {min(widths)} to {max(widths)} px",
+            f"- Height range: {min(heights)} to {max(heights)} px",
+            "- Every image is resized with aspect-preserving white padding by"
+            " common/preprocess.py before it reaches a model, so this variation"
+            " does not need to be fixed in the raw data.",
+        ]
     lines += [
-        "",
-        "## Image sizes observed",
-        "",
-        ", ".join(f"{w}x{h}" for w, h in summary["image_sizes"]) or "none",
         "",
         "## Duplicates",
         "",
         f"- Duplicate groups (same perceptual hash): {summary['duplicate_group_count']}",
         f"- Images involved in a duplicate group: {summary['duplicate_image_count']}",
+    ]
+    if fold_method == "grouped_by_subject_id" and summary["duplicate_group_count"] > 0:
+        lines += [
+            "- Expected here, not a data quality problem: each subject in",
+            "  HandPD/NewHandPD retraces the same printed template 4 times,",
+            "  so repeated attempts by one subject often hash as near-identical.",
+            "  Folds are already grouped by subject_id above, which keeps every",
+            "  attempt from one subject in a single fold regardless.",
+        ]
+    lines += [
         "",
         "## Subject IDs",
         "",
@@ -167,7 +191,16 @@ def main() -> None:
     print("Counts by dataset:")
     for key, count in sorted(summary["counts_by_dataset"].items()):
         print(f"  {key}: {count}")
-    print(f"Image sizes observed: {summary['image_sizes']}")
+    sizes = summary["image_sizes"]
+    if len(sizes) <= 12:
+        print(f"Image sizes observed: {sizes}")
+    else:
+        widths = [w for w, _ in sizes]
+        heights = [h for _, h in sizes]
+        print(
+            f"Image sizes observed: {len(sizes)} distinct sizes, "
+            f"width {min(widths)}-{max(widths)}px, height {min(heights)}-{max(heights)}px"
+        )
     print(
         f"Duplicate groups: {summary['duplicate_group_count']} "
         f"({summary['duplicate_image_count']} images)"
