@@ -81,3 +81,60 @@ Defaults picked when the spec in `CLAUDE.md` left something ambiguous, and why.
   `wandb`, `lightgbm`, `shap`, none of which Phase 1 code imports), kept
   consistent with the Phase 0 decision to defer the full stack until it is
   actually exercised.
+
+## Phase 2
+
+- **`tremor_band_ratio`, `peak_freq_hz` and `spectral_entropy` are computed
+  from the summed Welch power spectra of the vx and vy velocity
+  components, not from a Welch spectrum of the speed (magnitude) signal**,
+  even though `CLAUDE.md`'s phrasing ("from a Welch spectrum of the speed
+  signal") reads as the latter. Verified empirically (see
+  `tremor/features.py`'s `spectral_features` docstring and the recovery
+  tests in `tests/test_tremor_features.py`): speed is
+  `sqrt(vx^2 + vy^2)`, a nonlinear function of a rotating velocity vector,
+  and on a spiral the baseline drawing motion is itself a second, more
+  slowly rotating vector. Combining two rotating vectors through a
+  magnitude produces intermodulation sidebands at
+  `|tremor_freq +/- baseline_rotation_freq|` rather than a clean peak at
+  `tremor_freq` (confirmed directly: injecting 10 Hz recovered 9.375 Hz or
+  even a doubled ~18.75 Hz harmonic under different tremor-injection
+  models, consistently outside the required 0.5 Hz tolerance). Summing the
+  linear vx and vy spectra avoids the nonlinearity and recovered every
+  tested frequency from 3 to 12 Hz within 0.3 Hz. `mean_speed`, `speed_cv`
+  and `jerk_rms` still use the literal speed magnitude, since those are
+  time-domain descriptive statistics, not frequency-domain peak-picking,
+  and are not affected by this issue.
+- **The synthetic tremor injection in `tremor/synthetic.py` adds a small
+  circular wobble directly in Cartesian coordinates**
+  (`x += A*cos(2*pi*f*t)`, `y += A*sin(2*pi*f*t)`), not a radial
+  oscillation in the spiral's own rotating polar frame
+  (`radius += A*sin(2*pi*f*t)`). The polar version was tried first and
+  produced the exact same intermodulation problem described above, since
+  it is still combining two rotating-frame quantities; injecting directly
+  in the fixed Cartesian frame avoids that regardless of how the spectral
+  features are computed, and matches how tremor is modeled in the
+  published spiral-tremor literature.
+- **A 2 Hz Butterworth high-pass filter (`remove_voluntary_movement`) is
+  applied to vx and vy before the Welch spectrum.** This removes the
+  slow, large-amplitude "voluntary movement" component of drawing a
+  spiral and is standard tremor-analysis practice; measured to make no
+  further difference once the vx/vy-based analysis above was in place
+  (the intermodulation was the dominant error source, not low-frequency
+  leakage), but kept since it is correct practice and harmless.
+- **`spiral_deviation_feature` excludes points within 5% of the trace's
+  maximum radius from its centroid** before fitting `r = a + b*theta`.
+  The angle `atan2(dy, dx)` is numerically undefined at the origin, so
+  including near-center points (present at the start of every spiral)
+  inflated the residual even for a perfectly generated ideal spiral
+  (measured at approximately 5.5% before this fix, against a chosen
+  "should be low" test bound of 5%). This is a real fix, not a loosened
+  test: the near-origin angle noise would equally inflate the deviation
+  reported for a real user's clean spiral.
+- **Tests use a synthetic spiral generator (`tremor/synthetic.py`), not
+  real recordings, because no ground-truth tremor frequency exists for
+  real recordings without lab equipment this project does not have.**
+  This is the one exception to the "no synthetic" data direction from the
+  user (see `docs/DECISIONS.md`): CLAUDE.md's own Phase 2 spec requires
+  it, and there is no substitute, since the entire point is validating the
+  feature extractor against a known frequency that only a generator can
+  supply.

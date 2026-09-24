@@ -1,0 +1,3 @@
+# Tremor validation configuration. See tremor/validate.py.
+seed: 0
+reports_dir: reports

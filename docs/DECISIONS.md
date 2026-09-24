@@ -56,3 +56,15 @@ do not silently contradict earlier ones.
   `data/raw/<dataset>/metadata.csv` from that. The `metadata.csv`
   mechanism itself in `training/data.py` stays general (any future dataset
   can supply one), only HandPD's own derivation changed.
+
+## Phase 2
+
+- **The user's "no synthetic" direction does not apply to
+  `tremor/synthetic.py`.** That instruction was about not settling for
+  synthetic stand-ins where real data was available and gettable (Phase
+  1's images); `CLAUDE.md`'s own Phase 2 spec requires a synthetic spiral
+  generator as the actual methodology, since no real recording has a
+  ground-truth tremor frequency to validate against without lab equipment
+  this project does not have. See `docs/ASSUMPTIONS.md` for the full
+  reasoning and the signal-processing decisions this phase needed to
+  actually hit the required 0.5 Hz recovery accuracy.
