@@ -63,7 +63,6 @@ def test_resize_with_padding_pads_non_square_input(spiral_image_factory) -> None
     tall[50:250, 60:90] = 0
     resized = resize_with_padding(tall, size=224)
     assert resized.shape == (224, 224)
-    # left and right strips should stay white padding
     assert (resized[:, 0] == 255).all()
     assert (resized[:, -1] == 255).all()
 

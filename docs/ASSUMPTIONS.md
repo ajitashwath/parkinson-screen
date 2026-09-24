@@ -198,3 +198,15 @@ Defaults picked when the spec in `CLAUDE.md` left something ambiguous, and why.
   This is a local environment workaround, not a code change: `make
   train-fast` and CI both still work unmodified on a machine whose default
   temp directory has room.
+- **Every `figure.write_html(...)` call passes `include_plotlyjs="cdn"`.**
+  The default embeds the full Plotly.js library inline in every HTML
+  file (about 3.5 MB each); with 8 report figures committed across
+  Phases 2 and 3, that pushed the repository's byte count to roughly 18 MB
+  of generated HTML against about 140 KB of actual Python source, which
+  made GitHub's language detector report the repo as almost entirely
+  HTML. Switching to a CDN reference dropped the same 8 files to about
+  45 KB total with no loss of functionality (an internet connection is
+  needed to view the charts, same as most Plotly HTML exports already
+  assume). `.gitattributes` also marks everything under `reports/` except
+  `reports/README.md` as `linguist-generated=true`, so generated output
+  is excluded from language statistics regardless of size going forward.

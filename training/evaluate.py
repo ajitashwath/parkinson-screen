@@ -135,12 +135,12 @@ def run_evaluation(results_path: Path, reports_dir: Path) -> dict[str, Path]:
 
     roc_figure = plot_roc_curves(results)
     roc_path = reports_dir / "roc_curves.html"
-    roc_figure.write_html(roc_path)
+    roc_figure.write_html(roc_path, include_plotlyjs="cdn")
     written["roc_curves"] = roc_path
 
     confusion_figure = plot_confusion_matrices(results)
     confusion_path = reports_dir / "confusion_matrices.html"
-    confusion_figure.write_html(confusion_path)
+    confusion_figure.write_html(confusion_path, include_plotlyjs="cdn")
     written["confusion_matrices"] = confusion_path
 
     print(table.to_string(index=False))

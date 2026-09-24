@@ -140,19 +140,19 @@ def run_validation(reports_dir: Path, seed: int = 0) -> dict[str, Path]:
     frequencies_hz, recovered = frequency_recovery_data(DEFAULT_FREQUENCIES_HZ, seed=seed)
     figure = plot_frequency_recovery(frequencies_hz, recovered)
     out_path = reports_dir / "tremor_frequency_recovery.html"
-    figure.write_html(out_path)
+    figure.write_html(out_path, include_plotlyjs="cdn")
     written["frequency_recovery"] = out_path
 
     amplitudes, ratios = amplitude_response_data(DEFAULT_AMPLITUDES, seed=seed)
     figure = plot_amplitude_response(amplitudes, ratios)
     out_path = reports_dir / "tremor_amplitude_response.html"
-    figure.write_html(out_path)
+    figure.write_html(out_path, include_plotlyjs="cdn")
     written["amplitude_response"] = out_path
 
     stability = stability_data(seeds=10)
     figure = plot_stability(stability, injected_freq_hz=6.0)
     out_path = reports_dir / "tremor_stability.html"
-    figure.write_html(out_path)
+    figure.write_html(out_path, include_plotlyjs="cdn")
     written["stability"] = out_path
 
     max_error = max(abs(r - f) for f, r in zip(frequencies_hz, recovered, strict=True))

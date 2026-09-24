@@ -36,6 +36,7 @@ import re
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 JUNK_NAME_PREFIXES = ("._",)
 JUNK_NAME_EXACT = (".DS_Store",)
@@ -44,12 +45,15 @@ JUNK_PATH_COMPONENTS = ("__MACOSX",)
 HANDPD_FILENAME_PATTERN = re.compile(r"^(\d+)-\d+\.jpg$", re.IGNORECASE)
 NEWHANDPD_FILENAME_PATTERN = re.compile(r"^[a-z]+\d+-([A-Za-z]+\d+)\.jpg$", re.IGNORECASE)
 
+DrawingKind = Literal["spiral", "wave"]
+Label = Literal["healthy", "parkinson"]
+
 
 @dataclass(frozen=True)
 class ArchiveSpec:
     zip_path: Path
-    kind: str  # "spiral" or "wave"
-    label: str  # "healthy" or "parkinson"
+    kind: DrawingKind
+    label: Label
     subject_pattern: re.Pattern[str]
 
 
