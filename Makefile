@@ -20,10 +20,10 @@ test:
 	pytest -q
 
 train-fast:
-	$(PYTHON) training/train.py --fast --config configs/train_resnet50.yaml
+	$(PYTHON) -m training.train --fast --config configs/train_resnet50.yaml
 
 export:
-	$(PYTHON) training/export_onnx.py --config configs/export.yaml
+	$(PYTHON) -m training.export_onnx --config configs/export.yaml
 
 backend:
 	cd backend && uvicorn main:app --reload --port 8000

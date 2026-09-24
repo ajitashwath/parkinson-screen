@@ -1,0 +1,26 @@
+# Data layer configuration. Every script that reads this also accepts
+# --config, --seed and --fast on the command line, which override these
+# defaults; see CLAUDE.md section 4.
+
+raw_dir: data/raw
+folds_path: data/folds.csv
+datasheet_path: docs/DATASHEET.md
+
+# Preprocessing (kept in sync with common.preprocess.PreprocessConfig)
+image_size: 224
+padding_frac: 0.08
+binarize_threshold: 200
+skeleton_stroke_width: 3
+
+# Leakage control
+n_folds: 5
+seed: 42
+
+# Subject ID extraction: null means "unknown", which makes assign_folds
+# fall back to grouping by perceptual image hash. Set this to a regex once
+# a downloaded dataset's real filename convention is known; CLAUDE.md rule 2
+# forbids guessing one in advance.
+subject_id_regex: null
+
+# Duplicate detection
+phash_size: 8

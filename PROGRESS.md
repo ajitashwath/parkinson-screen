@@ -69,7 +69,116 @@ download the datasets into `data/raw/` per the instructions Phase 1 writes to
 
 ---
 
-## Phase 1: Data layer and preprocessing - not started
+## Phase 1: Data layer and preprocessing - done
+
+**Plan:**
+- `common/preprocess.py`: the single deterministic preprocessing pipeline
+  (grayscale, crop to content bounding box with padding, resize with white
+  padding to a square, normalize to [0, 1], replicate to 3 channels, plus a
+  `skeleton_rerender` mode). Used by training now and by the backend from
+  Phase 7 onward.
+- `training/data.py`: `discover_images` builds a manifest from
+  `data/raw/<dataset>/<spiral|wave>/<healthy|parkinson>/*.png`;
+  `extract_subject_id` only recognizes a caller-supplied regex (no invented
+  filename convention, per `CLAUDE.md` rule 2); `assign_folds` does a
+  grouped stratified k-fold, grouping by subject ID when every row has one,
+  else falling back to grouping by perceptual image hash so duplicates
+  never split across folds; `build_train_augmentation` and
+  `SpiralWaveDataset` for train-only, on-the-fly augmentation.
+- `training/audit_data.py`: CLI that runs `discover_images` +
+  `assign_folds`, prints the summary, and can write it to a datasheet file.
+- `configs/data.yaml`: raw_dir, image size, padding, fold count, seed,
+  subject_id_regex (null by default).
+- `data/README.md`: full download instructions and the expected directory
+  layout for Kaggle "Parkinson's Drawings", HandPD/NewHandPD and PaHaW.
+- Tests: `tests/conftest.py` (synthetic spiral image factory and a fake
+  `data/raw/` tree fixture, so nothing depends on a real licensed dataset),
+  `tests/test_preprocess.py`, `tests/test_data.py`.
+
+**Done when:** audit runs end to end on the synthetic fixture, fold
+assignment has zero subject or duplicate-hash overlap across folds
+(tested), and preprocessing tests pass.
+
+**Built:**
+- `common/preprocess.py`: `load_grayscale`, `crop_to_content`,
+  `resize_with_padding`, `normalize`, `to_three_channel`,
+  `skeleton_rerender`, `preprocess_image` (the orchestrating entry point),
+  `PreprocessConfig`.
+- `training/data.py`: `discover_images`, `extract_subject_id`,
+  `compute_image_hash`, `has_usable_subject_ids`, `summarize`,
+  `assign_folds`, `save_folds_csv`, `build_train_augmentation`,
+  `SpiralWaveDataset`.
+- `training/audit_data.py`: CLI (`--config`, `--seed`, `--fast`, `--raw-dir`,
+  `--out`, `--folds-out`), plus `render_datasheet_markdown` and
+  `sample_for_fast_mode`.
+- `configs/data.yaml`.
+- `data/README.md` rewritten with real dataset guidance (Kaggle
+  "Parkinson's Drawings", HandPD/NewHandPD, PaHaW), the expected
+  `data/raw/<dataset>/<spiral|wave>/<healthy|parkinson>/*.png` layout, and
+  the leakage-fallback caveat.
+- `docs/DATASHEET.md` turned into a pointer at the audit command (real
+  content only comes from a real dataset, so this stays a TODO until one is
+  downloaded).
+- Tests: `tests/conftest.py` (`spiral_image_factory`, `blank_image`,
+  `synthetic_raw_dataset`, plus a `draw_wave` helper), `tests/test_preprocess.py`
+  (17 tests), `tests/test_data.py` (19 tests, including a
+  `pytest.importorskip("torch")`-guarded test of `SpiralWaveDataset`).
+
+**Verified:**
+- Installed `numpy`, `pandas`, `scikit-learn`, `scikit-image`,
+  `opencv-python-headless`, `Pillow`, `imagehash`, `PyYAML`, `scipy` into
+  `.venv`, plus CPU-only `torch`/`torchvision` from
+  `https://download.pytorch.org/whl/cpu` (so `SpiralWaveDataset` and the
+  augmentation pipeline are actually exercised, not skipped) and
+  `types-PyYAML` for mypy.
+- `.venv/Scripts/python.exe -m ruff check .` - "All checks passed!"
+- `.venv/Scripts/python.exe -m mypy common training tremor backend tests` -
+  "Success: no issues found in 11 source files"
+- `.venv/Scripts/python.exe -m pytest -q` - 36 passed (35 real, 1 no longer
+  skipped once torch was installed).
+- `.venv/Scripts/python.exe -m training.audit_data --config configs/data.yaml
+  --raw-dir <scratch> --out <scratch> --folds-out <scratch> --seed 42` run
+  against a scratch synthetic dataset (20 images, 4 kind/label groups): printed
+  the expected counts, fold method, image sizes and duplicate/subject-ID
+  facts, and wrote a readable datasheet and folds CSV. Real `data/` and
+  `docs/DATASHEET.md` were left untouched by this run.
+
+**Bugs found and fixed during verification (not just written and assumed
+correct):**
+- The first version of `synthetic_raw_dataset` drew every "wave" image with
+  the same spiral shape as "spiral" images (only extra jitter noise), so
+  `imagehash.phash` collapsed structurally-similar-but-unrelated images
+  into false duplicate groups. Fixed by adding a real `draw_wave` (sine
+  curve) helper and varying turns/cycles by kind, label and index, so only
+  the deliberately duplicated file collides. Caught by
+  `test_discover_images_flags_duplicate_hash` and
+  `test_summarize_reports_expected_fields` actually failing on first run.
+- `test_discover_images_flags_duplicate_hash` itself had an ambiguous
+  filename substring check (`"healthy_00"` matched both the spiral and the
+  wave folder); narrowed it to filter by `kind` and `label` first.
+- `training/audit_data.py` used `python training/audit_data.py`, which
+  fails with `ModuleNotFoundError: No module named 'training'` because the
+  script's own directory, not the repo root, ends up on `sys.path`. Fixed
+  to `python -m training.audit_data` everywhere (script docstring,
+  `data/README.md`, `docs/DATASHEET.md`) and corrected the same pattern
+  preemptively in the Makefile's `train-fast` and `export` targets for
+  Phase 3 and Phase 5.
+- The first real CLI run used the config's default `folds_path`
+  (`data/folds.csv`) while pointing `--raw-dir` at a scratch synthetic
+  fixture, which wrote fake fold data into the real `data/` directory.
+  Caught immediately by checking `data/` after the run; deleted the file
+  and added a `--folds-out` CLI override (symmetric with the existing
+  `--out`) so a demo or test run can never again write into the real
+  `data/` path by default.
+
+**Open:** none for this phase.
+
+**Assumptions:** see `docs/ASSUMPTIONS.md` (Phase 1 section).
+
+**Next:** Phase 2 (tremor analysis package). Needs from you: nothing to
+start the code.
+
+---
 
 ## Phase 2: Tremor analysis package - not started
 

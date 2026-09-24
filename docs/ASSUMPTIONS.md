@@ -45,3 +45,36 @@ Defaults picked when the spec in `CLAUDE.md` left something ambiguous, and why.
   immediately (global `ruff` upgraded back to a compatible version) and all
   further work moved into `.venv`, which is already covered by the
   repository's existing `.gitignore`.
+
+## Phase 1
+
+- **`subject_id_regex` defaults to `null` in `configs/data.yaml`.** No
+  downloaded dataset's real filename convention is known yet, and
+  `CLAUDE.md` rule 2 forbids inventing one. `extract_subject_id` only
+  extracts a subject ID when the caller supplies a working regex; until
+  then, `assign_folds` always uses the image-hash fallback and
+  `docs/DATASHEET.md` will report the leakage caveat loudly, exactly as the
+  phase spec requires.
+- **A row counts as having a usable subject ID only if every row in the
+  manifest has one and there is more than one distinct subject.** A
+  partially-populated subject_id column would silently leave some rows
+  ungrouped, which is worse than treating the whole dataset as unknown and
+  falling back to hash grouping.
+- **Fold grouping uses `StratifiedGroupKFold` for both the subject-ID and
+  the fallback case**, rather than a separate plain `StratifiedKFold` code
+  path for the fallback, as the phase text's wording ("stratified k-fold
+  plus duplicate grouping") could be read literally. `StratifiedGroupKFold`
+  with `groups=image_hash` already is a stratified k-fold plus duplicate
+  grouping; a second, different splitter class would be redundant.
+- **Normalization in `common/preprocess.py` only scales to `[0, 1]`**, not
+  to ImageNet mean/std. That normalization depends on which pretrained
+  backbone Phase 3 picks, so it belongs in the training-time transform, not
+  in the shared preprocessing both training and the backend depend on.
+- **CPU-only torch and torchvision were installed into the local `.venv`
+  for this phase**, to actually run `SpiralWaveDataset` and the
+  augmentation pipeline against the synthetic fixture rather than leave
+  that test skipped. This is a narrower install than the rest of the
+  training stack (no `pytorch-lightning`, `timm`, `transformers`, `mlflow`,
+  `wandb`, `lightgbm`, `shap`, none of which Phase 1 code imports), kept
+  consistent with the Phase 0 decision to defer the full stack until it is
+  actually exercised.
