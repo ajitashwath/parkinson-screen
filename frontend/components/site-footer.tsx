@@ -2,18 +2,18 @@ import Link from "next/link";
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-ink/10 bg-white/60">
-      <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between lg:px-8">
+    <footer className="bg-carbon text-paper">
+      <div className="site-container flex flex-col gap-6 py-8 text-sm text-paper/65 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-display font-semibold text-ink">Trace / Signal</p>
-          <p className="mt-1 text-xs">A careful, privacy-conscious movement screening prototype.</p>
+          <p className="font-display text-base tracking-[-0.03em] text-white">Kinesis</p>
+          <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-paper/45">Computer vision for movement traces</p>
         </div>
-        <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium">
-          <Link className="hover:text-ink" href="/draw">Start a trace</Link>
-          <Link className="hover:text-ink" href="/history">Your history</Link>
-          <Link className="hover:text-ink" href="/about">About the model</Link>
+        <div className="flex flex-wrap gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.12em]">
+          <Link className="hover:text-lime-100" href="/draw">Open capture</Link>
+          <Link className="hover:text-lime-100" href="/history">History</Link>
+          <Link className="hover:text-lime-100" href="/about">Method</Link>
         </div>
-        <p className="text-xs">For research and education. Not medical advice.</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-paper/45">Research instrument</p>
       </div>
     </footer>
   );

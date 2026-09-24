@@ -12,7 +12,7 @@ type PlotlyProps = {
 
 const Plotly = dynamic(() => import("react-plotly.js"), {
   ssr: false,
-  loading: () => <div className="h-64 animate-pulse rounded-2xl bg-ink/5" />,
+  loading: () => <div className="h-64 animate-pulse rounded-[4px] bg-linen" />,
 }) as unknown as ComponentType<PlotlyProps>;
 
 export function PlotlyChart({ data, layout, config, useResizeHandler = true }: PlotlyProps) {

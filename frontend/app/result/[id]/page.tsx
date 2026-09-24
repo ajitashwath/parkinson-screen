@@ -43,7 +43,7 @@ export default function ResultPage() {
   }, [id]);
 
   if (isLoading) {
-    return <div className="mx-auto min-h-[60vh] max-w-3xl animate-pulse px-5 py-24"><div className="h-6 w-40 rounded-full bg-ink/10" /><div className="mt-6 h-16 max-w-xl rounded-2xl bg-ink/10" /><div className="mt-8 h-80 rounded-3xl bg-ink/5" /></div>;
+    return <div className="site-container min-h-[60vh] animate-pulse py-24"><div className="h-6 w-40 rounded-[4px] bg-stone" /><div className="mt-6 h-16 max-w-xl rounded-[4px] bg-linen" /><div className="mt-8 h-80 rounded-[4px] bg-linen" /></div>;
   }
 
   if (error || !result) {
@@ -51,7 +51,7 @@ export default function ResultPage() {
       <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center px-5 py-24 text-center">
         <p className="eyebrow">Result unavailable</p>
         <h1 className="mt-4 font-display text-4xl font-semibold text-ink">We could not find that review.</h1>
-        <p className="mt-4 text-muted">{error ?? "Make a new trace and the review will appear here."}</p>
+        <p className="mt-4 text-graphite">{error ?? "Make a new trace and the review will appear here."}</p>
         <Link className="button-primary mt-8" href="/draw">Start a new trace</Link>
       </div>
     );

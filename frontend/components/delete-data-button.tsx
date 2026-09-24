@@ -26,15 +26,15 @@ export function DeleteDataButton() {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <button
-        className="rounded-full border border-coral-200 bg-white px-4 py-2 text-sm font-semibold text-coral-600 transition-colors hover:bg-coral-50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-[4px] border border-violet px-4 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-violet transition-colors hover:bg-linen disabled:cursor-not-allowed disabled:opacity-50"
         disabled={deleted || isDeleting}
         onClick={() => void handleDelete()}
         type="button"
       >
-        {deleted ? "Data deleted" : isDeleting ? "Deleting…" : "Delete my data"}
+        {deleted ? "Data deleted" : isDeleting ? "Deleting" : "Delete my data"}
       </button>
-      {deleted ? <span className="text-xs font-medium text-teal-700">Your browser history was cleared.</span> : null}
-      {error ? <span className="text-xs font-medium text-coral-600" role="alert">{error}</span> : null}
+      {deleted ? <span className="text-xs text-abyss">Your browser history was cleared.</span> : null}
+      {error ? <span className="text-xs text-violet" role="alert">{error}</span> : null}
     </div>
   );
 }

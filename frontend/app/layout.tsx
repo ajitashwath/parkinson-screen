@@ -5,10 +5,10 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Trace / Signal",
-    template: "%s | Trace / Signal",
+    default: "Kinesis",
+    template: "%s | Kinesis",
   },
-  description: "A privacy-conscious movement screening research prototype.",
+  description: "Kinesis is a computer vision research instrument for movement traces.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

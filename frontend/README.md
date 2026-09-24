@@ -1,6 +1,6 @@
-# Trace / Signal frontend
+# Kinesis frontend
 
-Next.js App Router frontend for the spiral and wave screening prototype.
+Next.js App Router frontend for Kinesis, a computer vision research instrument for spiral and wave movement traces.
 
 ## Local development
 
@@ -22,4 +22,4 @@ npm test
 npm run build
 ```
 
-The drawing canvas records pointer coordinates, timing, pressure, pointer type, and pen-lift markers in memory. Only result metadata is retained in browser storage for the history view. Raw images and raw stroke points are not persisted by this frontend.
+The capture page supports live pointer drawing and validated PNG/JPEG image upload. The drawing canvas records pointer coordinates, timing, pressure, pointer type, and pen-lift markers in memory. Only result metadata is retained in browser storage for the history view. Raw images and raw stroke points are not persisted by this frontend.

@@ -566,19 +566,35 @@ tests.
 - Typed API and storage modules in `frontend/lib/`: result normalization, mock health/prediction/tremor data, device ID generation, metadata-only browser history, feature formatting, and API session deletion.
 - Result review includes probability dial, threshold uncertainty, occlusion map, feature report table, contribution chart, warnings, model version, provenance, and disclaimer.
 - History includes screening signal, personal first-session band, tremor-score trend, spiral-deviation trend, session log, and empty state. No population norms or fabricated user history are shown.
-- Added Vitest coverage for formatting, local storage, and deterministic mock responses.
+- Added Vitest coverage for formatting, local storage, deterministic mock responses, and image-upload validation.
+- Added `framer-motion` with reduced-motion support, subtle reveal/stagger primitives, and an animated trace glyph on the landing page.
+- Renamed the product to **Kinesis**, removed the brand icon, removed the requested hero label and preview panel, and rebuilt the home page as an asymmetric editorial research interface.
+- Added a dedicated image-upload mode to `/draw` with drag-and-drop, keyboard/file selection, PNG/JPEG validation, a 2 MB limit, preview, replace, and analyze actions. It passes the uploaded data URL through the same typed prediction path as live drawing.
+
+**Visual refresh:**
+- Reworked the global token layer around warm cream `#faf9f6`, linen, stone, hairline borders, abyssal ink, electric violet, and bioluminescent lime.
+- Replaced the soft SaaS treatment with flat editorial surfaces, 4px controls, mono metadata labels, light-weight display type, generous 1200px editorial spreads, and alternating dark/light sections inspired by the supplied Intercom and Integrated Biosciences references.
+- Updated the landing hero, navigation, drawing controls, occlusion map, result dial, chart palette, feature table, history cards, about page, and footer to use the new system.
+- Removed visible gradients, card shadows, old teal/coral/amber hex values, and oversized rounded-card utilities.
+
+**Latest layout polish (screenshot fix):**
+- Widened `.site-container` from 1200px to 1440px so the editorial composition uses the available desktop canvas.
+- Gave the hero `calc(100svh - 112px)` height, removed forced four-line display wrapping, reduced display sizes, and added lime/violet underline accents.
+- Added viewport-aware minimum heights to the instrument, capture-path, and closing sections, with more generous row spacing and a calmer hover treatment.
+- The capture and upload pages remain fully functional while using the same widened shell.
 
 **Verified:**
 - `npm install` initially ended with registry `ECONNRESET`; retry with `npm install --prefer-offline --no-audit --no-fund` completed successfully and installed the dependency tree.
 - `npm run typecheck` - passed after the build-generated Next type files were available. A parallel typecheck/build attempt failed only because the build cleaned `.next` while `tsc` was reading it; the sequential rerun passed.
 - `npm run lint` - passed. Generated `frontend/next-env.d.ts` is excluded from ESLint.
-- `npm test` - 3 test files and 7 tests passed.
-- `npm run build` - passed; routes `/`, `/about`, `/draw`, `/history`, and dynamic `/result/[id]` were generated successfully.
-- Standalone server route smoke test on port 3101 - `/`, `/draw`, `/history`, `/about`, and `/result/demo-smoke` each returned HTTP 200.
+- `npm test` with `TEMP` and `TMP` redirected to `E:\parkinson-screen\.tmp` - 4 test files and 9 tests passed, including invalid-file and valid-image upload cases. The first retry hit the known system-drive `ENOSPC` condition; the workspace-temp retry passed.
+- `npm run build` - passed; routes `/`, `/about`, `/draw`, `/history`, and dynamic `/result/[id]` were generated successfully after the Kinesis redesign and upload flow.
+- Standalone server route smoke test on port 3106 - `/`, `/draw`, `/draw?mode=upload`, `/history`, `/about`, and `/result/demo-smoke` each returned HTTP 200.
+- Latest screenshot-fix pass: `npm run typecheck`, `npm run lint`, and `npm test` (4 files, 9 tests) passed. The standard production build compiled the app but its build worker then hit a Windows out-of-memory abort because an already-running Next dev server was using about 1.3 GB. The live dev routes returned 500 while that process was memory-constrained. Stop and restart the dev server, then rerun `npm run build` and the route smoke test.
 
 **Open:**
 - Phases 5 to 7 are not built, so the frontend currently uses a clearly labelled deterministic development adapter. Set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_USE_MOCK_API=false` after the backend contract is available.
-- A real browser walkthrough of pointer capture and Plotly interaction is still needed on a touchscreen, stylus, mouse, and mobile viewport.
+- A real browser walkthrough of pointer capture, image upload, Framer Motion transitions, and Plotly interaction is still needed on a touchscreen, stylus, mouse, and mobile viewport.
 - `npm start` prints a Next warning because the project uses standalone output; Phase 9 deployment should launch the generated standalone server or remove standalone output for the chosen hosting target.
 
 **Assumptions:**

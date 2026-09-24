@@ -13,7 +13,7 @@ interface DrawingCanvasProps {
 
 function drawTemplate(context: CanvasRenderingContext2D, size: number, kind: DrawingKind) {
   context.save();
-  context.strokeStyle = "#d7e2e0";
+  context.strokeStyle = "#c9cbbe";
   context.lineWidth = 2;
   context.setLineDash([6, 8]);
   context.beginPath();
@@ -55,8 +55,8 @@ function drawStroke(context: CanvasRenderingContext2D, points: StrokePoint[]) {
     return;
   }
   context.save();
-  context.strokeStyle = "#172b3a";
-  context.fillStyle = "#172b3a";
+  context.strokeStyle = "#222f30";
+  context.fillStyle = "#222f30";
   context.lineWidth = 6;
   context.lineCap = "round";
   context.lineJoin = "round";
@@ -311,7 +311,7 @@ export function DrawingCanvas({ kind, isSubmitting, onSubmit, onQualityChange }:
         <canvas
           aria-describedby="draw-instructions"
           aria-label={`${kind} drawing canvas`}
-          className="aspect-square w-full touch-none rounded-3xl border border-ink/10 bg-white shadow-card outline-none ring-offset-4 focus-visible:ring-2 focus-visible:ring-teal-500"
+          className="aspect-square w-full touch-none rounded-[4px] border border-hairline bg-white outline-none ring-offset-4 focus-visible:ring-2 focus-visible:ring-violet"
           onPointerCancel={finishStroke}
           onPointerDown={beginStroke}
           onPointerMove={moveStroke}
@@ -320,20 +320,20 @@ export function DrawingCanvas({ kind, isSubmitting, onSubmit, onQualityChange }:
           role="img"
           tabIndex={0}
         />
-        {isDrawing ? <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-ink/90 px-3 py-1.5 text-xs font-semibold text-white">Tracing…</div> : null}
+        {isDrawing ? <div className="pointer-events-none absolute left-4 top-4 rounded-[4px] bg-abyss px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-lime-100">Tracing</div> : null}
       </div>
       <p className="sr-only" id="draw-instructions">Draw a continuous {kind} over the faint template. Press and hold, then trace the shape in one movement.</p>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-2">
-          <button className="rounded-full border border-ink/15 px-4 py-2 text-sm font-semibold text-muted transition-colors hover:border-ink/30 hover:text-ink disabled:opacity-40" disabled={!hasPoints || isSubmitting} onClick={undo} type="button">Undo</button>
-          <button className="rounded-full border border-ink/15 px-4 py-2 text-sm font-semibold text-muted transition-colors hover:border-ink/30 hover:text-ink disabled:opacity-40" disabled={!hasPoints || isSubmitting} onClick={clear} type="button">Clear</button>
+          <button className="rounded-[4px] border border-hairline px-4 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-graphite transition-colors hover:border-ink hover:text-ink disabled:opacity-40" disabled={!hasPoints || isSubmitting} onClick={undo} type="button">Undo</button>
+          <button className="rounded-[4px] border border-hairline px-4 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-graphite transition-colors hover:border-ink hover:text-ink disabled:opacity-40" disabled={!hasPoints || isSubmitting} onClick={clear} type="button">Clear</button>
         </div>
-        <button className="inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-45" disabled={!hasPoints || isSubmitting} onClick={() => void submit()} type="button">
+        <button className="inline-flex items-center gap-2 rounded-[4px] bg-carbon px-5 py-2.5 font-mono text-[10px] uppercase tracking-[0.1em] text-white transition-colors hover:bg-abyss disabled:cursor-not-allowed disabled:opacity-45" disabled={!hasPoints || isSubmitting} onClick={() => void submit()} type="button">
           {isSubmitting ? "Preparing review…" : "Analyze trace"}
           <span aria-hidden="true">→</span>
         </button>
       </div>
-      {submitError ? <p className="rounded-xl bg-coral-50 px-4 py-3 text-sm font-medium text-coral-600" role="alert">{submitError}</p> : null}
+      {submitError ? <p className="rounded-[4px] border border-violet/30 bg-linen px-4 py-3 text-sm text-violet" role="alert">{submitError}</p> : null}
     </div>
   );
 }
