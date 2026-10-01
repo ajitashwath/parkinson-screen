@@ -8,6 +8,10 @@ torchvision==0.19.1
 pytorch-lightning==2.4.0
 timm==1.0.9
 transformers==4.44.2
+# Required for pretrained weight downloads: timm and Transformers route
+# through Hugging Face Hub's Xet storage, which hangs indefinitely on the
+# HTTP fallback without this package installed. See docs/ASSUMPTIONS.md.
+hf_xet==1.6.0
 
 # Classical ML and image processing
 scikit-learn==1.5.1

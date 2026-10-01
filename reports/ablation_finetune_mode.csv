@@ -1,0 +1,4 @@
+condition,roc_auc_mean,roc_auc_std,count
+dinov2_linear_probe,0.44999999999999996,0.07071067811865477,2
+frozen_backbone,0.6,0.14142135623730948,2
+full_finetune,0.6,0.14142135623730948,2

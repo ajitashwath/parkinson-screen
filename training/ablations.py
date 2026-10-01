@@ -42,7 +42,7 @@ def run_pretrained_vs_scratch(
     max_epochs = 1 if fast else config["max_epochs"]
     results = []
     for pretrained in (True, False):
-        for fold in sorted(manifest["fold"].unique()):
+        for fold in sorted(int(f) for f in manifest["fold"].unique()):
             train_df = manifest[manifest["fold"] != fold].reset_index(drop=True)
             test_df = manifest[manifest["fold"] == fold].reset_index(drop=True)
             if train_df.empty or test_df.empty:
@@ -64,7 +64,7 @@ def run_augmentation_ablation(
     pretrained = False if fast else config.get("pretrained", True)
     results = []
     for augment in (True, False):
-        for fold in sorted(manifest["fold"].unique()):
+        for fold in sorted(int(f) for f in manifest["fold"].unique()):
             train_df = manifest[manifest["fold"] != fold].reset_index(drop=True)
             test_df = manifest[manifest["fold"] == fold].reset_index(drop=True)
             if train_df.empty or test_df.empty:
@@ -98,7 +98,7 @@ def run_finetune_mode_ablation(
     ]
     results = []
     for condition_name, backbone, freeze_epochs, dinov2_mode in conditions:
-        for fold in sorted(manifest["fold"].unique()):
+        for fold in sorted(int(f) for f in manifest["fold"].unique()):
             train_df = manifest[manifest["fold"] != fold].reset_index(drop=True)
             test_df = manifest[manifest["fold"] == fold].reset_index(drop=True)
             if train_df.empty or test_df.empty:
@@ -136,7 +136,7 @@ def run_kind_fusion_ablation(
     results = []
     fusion_rows = []
 
-    for fold in sorted(manifest["fold"].unique()):
+    for fold in sorted(int(f) for f in manifest["fold"].unique()):
         per_kind: dict[str, dict[str, Any]] = {}
         for kind in ("spiral", "wave"):
             kind_manifest = manifest[manifest["kind"] == kind]
@@ -190,15 +190,45 @@ def fuse_kind_predictions(
         on="subject_id",
     )
 
+    default_threshold = 0.5
+    has_both_val_classes = len(val_merged) > 0 and val_merged["label"].nunique() == 2
+    has_both_test_classes = len(test_merged) > 0 and test_merged["label"].nunique() == 2
+
+    if not has_both_test_classes:
+        # Too few subjects have both a spiral and a wave image in this
+        # fold's test split to fuse at all (common with --fast mode's
+        # tiny per-class sample); report that plainly rather than
+        # crashing or fabricating an AUC from zero or one example.
+        return {
+            "ablation": "kind_fusion",
+            "condition": "fused",
+            "model": "fused",
+            "fold": fold,
+            "seed": seed,
+            "n_matched_test_subjects": len(test_merged),
+            "spiral_only_auc": spiral_result["roc_auc"],
+            "wave_only_auc": wave_result["roc_auc"],
+            "average_fusion_auc": float("nan"),
+            "stacked_fusion_auc": float("nan"),
+            "fusion_helps_vs_best_single": None,
+            "roc_auc": float("nan"),
+            "y_true": test_merged["label"].tolist(),
+            "y_prob": [],
+        }
+
     average_test_prob = test_merged[["spiral_prob", "wave_prob"]].mean(axis=1).to_numpy()
     average_val_prob = val_merged[["spiral_prob", "wave_prob"]].mean(axis=1).to_numpy()
-    average_threshold = select_threshold(val_merged["label"].to_numpy(), average_val_prob)
+    average_threshold = (
+        select_threshold(val_merged["label"].to_numpy(), average_val_prob)
+        if has_both_val_classes
+        else default_threshold
+    )
     average_metrics = compute_metrics(
         test_merged["label"].to_numpy(), average_test_prob, average_threshold
     )
 
     stacker_metrics = average_metrics
-    if val_merged["label"].nunique() == 2 and len(val_merged) >= 4:
+    if has_both_val_classes and len(val_merged) >= 4:
         stacker = LogisticRegression()
         stacker.fit(val_merged[["spiral_prob", "wave_prob"]].to_numpy(), val_merged["label"])
         stacked_val_prob = stacker.predict_proba(val_merged[["spiral_prob", "wave_prob"]])[:, 1]
@@ -238,7 +268,7 @@ def run_learning_curve(
     fractions = (0.25, 0.5, 1.0)
     results = []
     for fraction in fractions:
-        for fold in sorted(manifest["fold"].unique()):
+        for fold in sorted(int(f) for f in manifest["fold"].unique()):
             train_df = manifest[manifest["fold"] != fold].reset_index(drop=True)
             test_df = manifest[manifest["fold"] == fold].reset_index(drop=True)
             if train_df.empty or test_df.empty:
@@ -285,6 +315,25 @@ def plot_ablation_bars(summary: pd.DataFrame, title: str) -> go.Figure:
         )
     )
     figure.update_layout(title=title, yaxis_title="ROC-AUC (mean +/- std across folds)")
+    return figure
+
+
+def plot_kind_fusion(fusion_df: pd.DataFrame) -> go.Figure:
+    figure = go.Figure()
+    for column, label in [
+        ("spiral_only_auc", "spiral only"),
+        ("wave_only_auc", "wave only"),
+        ("average_fusion_auc", "average fusion"),
+        ("stacked_fusion_auc", "stacked fusion"),
+    ]:
+        figure.add_trace(go.Bar(x=fusion_df["fold"], y=fusion_df[column], name=label))
+    figure.update_layout(
+        title="Kind fusion: ROC-AUC by fold (NaN means too few matched subjects or a "
+        "single-class test fold in this --fast sample)",
+        xaxis_title="fold",
+        yaxis_title="ROC-AUC",
+        barmode="group",
+    )
     return figure
 
 
@@ -343,6 +392,11 @@ def write_ablation_report(results: list[dict[str, Any]], reports_dir: Path) -> d
         fusion_csv = reports_dir / "ablation_kind_fusion.csv"
         fusion_df.to_csv(fusion_csv, index=False)
         written["kind_fusion_csv"] = fusion_csv
+
+        figure = plot_kind_fusion(fusion_df)
+        fusion_html = reports_dir / "ablation_kind_fusion.html"
+        figure.write_html(fusion_html, include_plotlyjs="cdn")
+        written["kind_fusion_html"] = fusion_html
 
     return written
 

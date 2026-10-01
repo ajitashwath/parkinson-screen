@@ -83,7 +83,7 @@ def run_shortcut_check(
 
     results: list[dict[str, Any]] = []
     for condition_name, condition_manifest, mode in conditions:
-        for fold in sorted(condition_manifest["fold"].unique()):
+        for fold in sorted(int(f) for f in condition_manifest["fold"].unique()):
             train_df = condition_manifest[condition_manifest["fold"] != fold].reset_index(drop=True)
             test_df = condition_manifest[condition_manifest["fold"] == fold].reset_index(drop=True)
             if train_df.empty or test_df.empty:

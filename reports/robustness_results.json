@@ -1,0 +1,230 @@
+[
+  {
+    "fold": 0,
+    "corruption": "none",
+    "severity": 0,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 0,
+    "corruption": "blur",
+    "severity": 1,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 0,
+    "corruption": "blur",
+    "severity": 2,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 0,
+    "corruption": "blur",
+    "severity": 3,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 0,
+    "corruption": "gaussian_noise",
+    "severity": 1,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 0,
+    "corruption": "gaussian_noise",
+    "severity": 2,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 0,
+    "corruption": "gaussian_noise",
+    "severity": 3,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 0,
+    "corruption": "rotation",
+    "severity": 1,
+    "roc_auc": 0.25
+  },
+  {
+    "fold": 0,
+    "corruption": "rotation",
+    "severity": 2,
+    "roc_auc": 0.25
+  },
+  {
+    "fold": 0,
+    "corruption": "rotation",
+    "severity": 3,
+    "roc_auc": 0.75
+  },
+  {
+    "fold": 0,
+    "corruption": "dilate",
+    "severity": 1,
+    "roc_auc": 0.75
+  },
+  {
+    "fold": 0,
+    "corruption": "dilate",
+    "severity": 2,
+    "roc_auc": 1.0
+  },
+  {
+    "fold": 0,
+    "corruption": "dilate",
+    "severity": 3,
+    "roc_auc": 1.0
+  },
+  {
+    "fold": 0,
+    "corruption": "erode",
+    "severity": 1,
+    "roc_auc": 1.0
+  },
+  {
+    "fold": 0,
+    "corruption": "erode",
+    "severity": 2,
+    "roc_auc": 0.75
+  },
+  {
+    "fold": 0,
+    "corruption": "erode",
+    "severity": 3,
+    "roc_auc": 0.75
+  },
+  {
+    "fold": 0,
+    "corruption": "jpeg_compression",
+    "severity": 1,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 0,
+    "corruption": "jpeg_compression",
+    "severity": 2,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 0,
+    "corruption": "jpeg_compression",
+    "severity": 3,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 1,
+    "corruption": "none",
+    "severity": 0,
+    "roc_auc": 0.7
+  },
+  {
+    "fold": 1,
+    "corruption": "blur",
+    "severity": 1,
+    "roc_auc": 0.7
+  },
+  {
+    "fold": 1,
+    "corruption": "blur",
+    "severity": 2,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 1,
+    "corruption": "blur",
+    "severity": 3,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 1,
+    "corruption": "gaussian_noise",
+    "severity": 1,
+    "roc_auc": 0.8
+  },
+  {
+    "fold": 1,
+    "corruption": "gaussian_noise",
+    "severity": 2,
+    "roc_auc": 0.8
+  },
+  {
+    "fold": 1,
+    "corruption": "gaussian_noise",
+    "severity": 3,
+    "roc_auc": 0.8
+  },
+  {
+    "fold": 1,
+    "corruption": "rotation",
+    "severity": 1,
+    "roc_auc": 0.6
+  },
+  {
+    "fold": 1,
+    "corruption": "rotation",
+    "severity": 2,
+    "roc_auc": 0.4
+  },
+  {
+    "fold": 1,
+    "corruption": "rotation",
+    "severity": 3,
+    "roc_auc": 0.4
+  },
+  {
+    "fold": 1,
+    "corruption": "dilate",
+    "severity": 1,
+    "roc_auc": 0.3
+  },
+  {
+    "fold": 1,
+    "corruption": "dilate",
+    "severity": 2,
+    "roc_auc": 0.39999999999999997
+  },
+  {
+    "fold": 1,
+    "corruption": "dilate",
+    "severity": 3,
+    "roc_auc": 0.3
+  },
+  {
+    "fold": 1,
+    "corruption": "erode",
+    "severity": 1,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 1,
+    "corruption": "erode",
+    "severity": 2,
+    "roc_auc": 0.5
+  },
+  {
+    "fold": 1,
+    "corruption": "erode",
+    "severity": 3,
+    "roc_auc": 0.7
+  },
+  {
+    "fold": 1,
+    "corruption": "jpeg_compression",
+    "severity": 1,
+    "roc_auc": 0.6
+  },
+  {
+    "fold": 1,
+    "corruption": "jpeg_compression",
+    "severity": 2,
+    "roc_auc": 0.7
+  },
+  {
+    "fold": 1,
+    "corruption": "jpeg_compression",
+    "severity": 3,
+    "roc_auc": 0.6
+  }
+]

@@ -210,3 +210,23 @@ Defaults picked when the spec in `CLAUDE.md` left something ambiguous, and why.
   assume). `.gitattributes` also marks everything under `reports/` except
   `reports/README.md` as `linguist-generated=true`, so generated output
   is excluded from language statistics regardless of size going forward.
+
+## Phase 4 (continued)
+
+- **`hf_xet==1.6.0` was added to `requirements-train.txt`.** The
+  `pretrained_vs_scratch` ablation is the first script in this project
+  that actually needs `pretrained=True` during a `--fast` run (every
+  other `--fast` path uses `pretrained=False` specifically to avoid
+  needing a download at all); timm 1.0.9 and Transformers 4.44.2 both
+  route pretrained weight downloads through Hugging Face Hub's Xet
+  storage. Without the `hf_xet` package, the client falls back to a
+  plain HTTP path that, on this machine, did not just run slower: it
+  hung indefinitely (confirmed via `Get-Process`, over 7 minutes elapsed
+  against about 0.1 seconds of CPU time consumed, a genuine network
+  stall rather than a slow download). Installing `hf_xet` fixed it: the
+  same `resnet50` ImageNet-weights download completed in about 14
+  seconds. Caught by testing `build_backbone("resnet50", pretrained=True)`
+  in isolation with a bounded `timeout` wrapper after the full
+  `training.ablations --fast` run hung with no output for several
+  minutes, rather than assuming the eventual symptom (a hang) pointed at
+  the actual cause.

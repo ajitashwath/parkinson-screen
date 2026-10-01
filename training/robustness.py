@@ -130,7 +130,7 @@ def run_robustness_check(
     pretrained = False if fast else config.get("pretrained", True)
 
     results: list[dict[str, Any]] = []
-    for fold in sorted(manifest["fold"].unique()):
+    for fold in sorted(int(f) for f in manifest["fold"].unique()):
         train_df = manifest[manifest["fold"] != fold].reset_index(drop=True)
         test_df = manifest[manifest["fold"] == fold].reset_index(drop=True)
         if train_df.empty or test_df.empty:

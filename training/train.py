@@ -69,11 +69,19 @@ def split_train_val(
     """Split a training fold into train and validation, grouped the same
     way the outer folds are (by subject when available, else image hash),
     so validation never leaks the same subject's other images. n_splits is
-    capped at the smallest class's count: StratifiedGroupKFold cannot
-    stratify past that and warns loudly instead, which matters most for
-    --fast mode's tiny per-fold samples."""
+    capped at the smallest class's count and at the total sample count:
+    StratifiedGroupKFold requires both, and --fast mode's per-kind,
+    per-fold subsets (training/ablations.py's kind_fusion ablation) can
+    be as small as a single row, which no 2-way split can serve. When a
+    real split is infeasible, everything goes to train and validation is
+    left empty; fit_backbone falls back to a default decision threshold
+    in that case rather than crashing on an empty roc_curve input."""
     smallest_class_count = int(manifest["label"].value_counts().min())
-    n_splits = max(2, min(round(1 / val_fraction), smallest_class_count))
+    max_feasible_splits = min(len(manifest), smallest_class_count)
+    if max_feasible_splits < 2:
+        empty = manifest.iloc[0:0].reset_index(drop=True)
+        return manifest.reset_index(drop=True), empty
+    n_splits = max(2, min(round(1 / val_fraction), max_feasible_splits))
     groups = manifest["subject_id"] if has_usable_subject_ids(manifest) else manifest["image_hash"]
     splitter = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=seed)
     train_index, val_index = next(splitter.split(manifest, manifest["label"], groups))
@@ -164,43 +172,66 @@ def fit_backbone(
         max_epochs=max_epochs,
     )
 
+    # A --fast per-kind, per-fold subset (training/ablations.py's
+    # kind_fusion ablation) can be too small for split_train_val to carve
+    # out any validation rows at all. With no validation data there is
+    # nothing to monitor a checkpoint or pick a threshold from, so this
+    # falls back to the final-epoch model and a neutral 0.5 threshold
+    # instead of crashing; real training always has a real validation
+    # split, since the full dataset is never this small.
+    has_validation = len(val_df) > 0
+
     # Checkpoints are working state for picking the best epoch, not a
     # deliverable of a --fast smoke run or even of one fold/seed of a real
     # run (Phase 5's export_onnx.py saves the actual champion model), so
     # they live in a scratch directory that is deleted right after use
     # rather than accumulating under the repo.
     with tempfile.TemporaryDirectory(prefix="lightning_ckpt_") as checkpoint_dir:
-        checkpoint_callback = ModelCheckpoint(
-            dirpath=checkpoint_dir,
-            monitor="val_loss",
-            mode="min",
-            save_top_k=1,
-            save_weights_only=True,
-        )
-        callbacks: list[Any] = [checkpoint_callback]
-        if max_epochs > 1:
-            patience = config.get("patience", 3)
-            callbacks.append(EarlyStopping(monitor="val_loss", mode="min", patience=patience))
+        callbacks: list[Any] = []
+        checkpoint_callback: ModelCheckpoint | None = None
+        if has_validation:
+            checkpoint_callback = ModelCheckpoint(
+                dirpath=checkpoint_dir,
+                monitor="val_loss",
+                mode="min",
+                save_top_k=1,
+                save_weights_only=True,
+            )
+            callbacks.append(checkpoint_callback)
+            if max_epochs > 1:
+                patience = config.get("patience", 3)
+                callbacks.append(EarlyStopping(monitor="val_loss", mode="min", patience=patience))
 
         trainer = Trainer(
             max_epochs=max_epochs,
             accelerator="cpu",
             enable_progress_bar=False,
+            enable_checkpointing=has_validation,
             logger=False,
             callbacks=callbacks,
             num_sanity_val_steps=0,
         )
-        trainer.fit(model, train_loader, val_loader)
+        if has_validation:
+            trainer.fit(model, train_loader, val_loader)
+        else:
+            trainer.fit(model, train_loader)
 
         best_model = model
-        if checkpoint_callback.best_model_path:
+        if checkpoint_callback is not None and checkpoint_callback.best_model_path:
             best_model = SpiralWaveClassifier.load_from_checkpoint(
                 checkpoint_callback.best_model_path
             )
 
-        val_probabilities = predict_probabilities(trainer, best_model, val_loader)
-        val_labels = np.array([1 if label == "parkinson" else 0 for label in val_df["label"]])
-        threshold = select_threshold(val_labels, val_probabilities, config["target_sensitivity"])
+        if has_validation:
+            val_probabilities = predict_probabilities(trainer, best_model, val_loader)
+            val_labels = np.array([1 if label == "parkinson" else 0 for label in val_df["label"]])
+            threshold = select_threshold(
+                val_labels, val_probabilities, config["target_sensitivity"]
+            )
+        else:
+            val_probabilities = np.array([])
+            val_labels = np.array([])
+            threshold = 0.5
 
     val_result = val_df.copy()
     val_result["y_true"] = val_labels
@@ -343,7 +374,7 @@ def run_training(config: dict[str, Any], seed: int, fast: bool) -> list[dict[str
         folds_to_run = [0]
     else:
         backbone_names = [config["backbone"]]
-        folds_to_run = sorted(manifest["fold"].unique())
+        folds_to_run = sorted(int(f) for f in manifest["fold"].unique())
         max_epochs = config["max_epochs"]
         pretrained = config.get("pretrained", True)
 

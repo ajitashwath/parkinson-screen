@@ -515,7 +515,7 @@ will need the GPU training run from Phase 3 to have happened first.
 
 ---
 
-## Phase 4: Experiments - in progress
+## Phase 4: Experiments - done
 
 **Plan:**
 - `training/metrics.py`: add back `paired_bootstrap_comparison` (removed
@@ -543,6 +543,151 @@ will need the GPU training run from Phase 3 to have happened first.
 **Done when:** every experiment runs in `--fast` mode and produces its
 tables and figures, and the code paths are covered by at least smoke
 tests.
+
+**Built:**
+- `training/metrics.py`: `paired_bootstrap_comparison` (observed AUC
+  difference plus a two-sided paired-bootstrap p-value).
+- `training/data.py`: `SpiralWaveDataset.augment`, decoupled from `train`.
+- `training/train.py`: split `train_one_backbone` into `fit_backbone`
+  (train once, pick a threshold on validation) and
+  `evaluate_fitted_backbone` (evaluate on any test set, no retraining),
+  used directly by `training/robustness.py` to reuse one trained model
+  across every corrupted test set. `train_one_backbone` is now a thin
+  wrapper over both, unchanged for every existing caller. Also added
+  `preprocess_mode`, `augment`, `freeze_epochs` and `dinov2_mode`
+  overrides so the ablations never need a second copy of the training
+  loop.
+- `training/ablations.py`: `run_pretrained_vs_scratch`,
+  `run_augmentation_ablation`, `run_finetune_mode_ablation`,
+  `run_kind_fusion_ablation` + `fuse_kind_predictions` (probability
+  averaging and a logistic-regression stacker over matched
+  spiral/wave subjects), `run_learning_curve`, `write_ablation_report`,
+  a CLI.
+- `training/shortcut_check.py`: `erase_stroke_pixels` (inpaints over the
+  stroke mask rather than flat-filling, so real scanner/paper texture
+  elsewhere stays intact), `run_shortcut_check`, `render_finding`
+  (states "possible shortcut detected" or "no shortcut detected" based on
+  whether the background-only model's AUC confidence interval clears
+  chance), a CLI.
+- `training/robustness.py`: 6 corruption functions (blur, Gaussian noise,
+  rotation, dilate, erode, JPEG compression) at 3 severities, applied to
+  test images only; `run_robustness_check` fits one model per fold and
+  evaluates it against every corrupted variant; a CLI.
+- Tests: `tests/test_ablations.py` (8), `tests/test_shortcut_check.py`
+  (9), `tests/test_robustness.py` (11): 28 new tests, against the pure
+  data-transformation, summarization and plotting functions using the
+  existing synthetic image fixtures, not real training (too slow for a
+  test suite; the real training path is verified by actually running
+  each script, below).
+
+**Verified:**
+- `.venv/Scripts/python.exe -m ruff check .` - "All checks passed!"
+- `.venv/Scripts/python.exe -m mypy common training tremor backend tests`
+  - "Success: no issues found in 33 source files"
+- `.venv/Scripts/python.exe -m pytest -q` - 169 passed.
+- `.venv/Scripts/python.exe -m training.ablations --config
+  configs/train_resnet50.yaml --fast --seed 42` run for real against real
+  HandPD/NewHandPD images: all 5 sub-experiments (pretrained vs scratch,
+  augmentation, fine-tune mode, kind fusion, learning curve) completed
+  and wrote `reports/ablation_results.json` plus a CSV and HTML figure
+  per sub-experiment (9 files total).
+- `.venv/Scripts/python.exe -m training.shortcut_check --config
+  configs/train_resnet50.yaml --fast --seed 42` run for real: wrote
+  `reports/shortcut_check_results.json`,
+  `reports/shortcut_check_finding.md` ("no shortcut detected": the
+  background-only model's AUC, 0.100, sits below chance, not above it),
+  and `reports/shortcut_check.html`.
+- `.venv/Scripts/python.exe -m training.robustness --config
+  configs/train_resnet50.yaml --fast --seed 42` run for real: all 6
+  corruption types at all 3 severities (plus the clean baseline)
+  evaluated without crashing, wrote `reports/robustness_results.json`,
+  `reports/robustness_summary.csv`, `reports/robustness.html`.
+
+**Bugs found and fixed during verification, not assumed correct from the
+spec text alone:**
+- The `pretrained_vs_scratch` ablation is the first script in this
+  project whose `--fast` path actually needs `pretrained=True` (every
+  other `--fast` path uses `pretrained=False` specifically to avoid a
+  download). `python -m training.ablations --fast` hung indefinitely
+  (confirmed genuinely stuck, not slow, via `Get-Process`: over 7 minutes
+  elapsed against about 0.1 seconds of CPU time consumed) on
+  downloading resnet50's ImageNet weights through Hugging Face Hub's Xet
+  storage. Installing `hf_xet` (now pinned in `requirements-train.txt`)
+  fixed it: the same download then completed in about 14 seconds. Caught
+  by isolating `build_backbone("resnet50", pretrained=True)` in a
+  bounded `timeout` wrapper after the full pipeline hung with no output,
+  rather than assuming the symptom (a hang) matched its eventual cause.
+- `run_kind_fusion_ablation` crashed inside `fuse_kind_predictions` with
+  `ValueError: y_true takes value in {} and pos_label is not specified`:
+  merging spiral and wave validation predictions on `subject_id` produced
+  zero matched rows in this particular `--fast`-mode tiny subsample and
+  fold, and `select_threshold` was called unconditionally on the
+  (empty) result. Fixed by checking for both classes being present in
+  the merged validation and test sets before computing a threshold or
+  metrics, returning NaN AUC values and `fusion_helps_vs_best_single:
+  None` instead, which is what actually happened, not a crash and not a
+  fabricated number.
+- Fixing that surfaced a second, deeper crash in the same ablation:
+  `split_train_val` raised `ValueError: Cannot have number of splits
+  n_splits=2 greater than the number of samples: n_samples=1` for a
+  kind-filtered, fold-filtered training subset with a single row.
+  `split_train_val`'s own `max(2, ...)` floor on `n_splits` could exceed
+  both the smallest class's count and the total sample count at once.
+  Fixed by capping `n_splits` at `min(len(manifest),
+  smallest_class_count)` and falling back to an empty validation split
+  (everything in train) when even a 2-way split is infeasible, rather
+  than crashing.
+- That empty-validation fallback then surfaced a third problem, not an
+  exception this time but a silent 1.4 GB disk leak: with no
+  `ModelCheckpoint` callback passed (since there is no validation loss to
+  monitor), PyTorch Lightning's `Trainer` defaults to
+  `enable_checkpointing=True` and silently adds its own default
+  `ModelCheckpoint`, writing to `./checkpoints` relative to the project
+  root rather than the intended `tempfile.TemporaryDirectory`. Caught by
+  noticing a `Checkpoint directory ... exists and is not empty` log line
+  that should never have appeared, then confirming with `du -sh
+  checkpoints/` (1.4 GB across 14 files). Fixed with
+  `enable_checkpointing=has_validation` on the `Trainer`, and the leaked
+  files were deleted (already gitignored via the existing `*.ckpt`
+  pattern, so none of it was ever at risk of being committed).
+- `fold` values iterated from `sorted(manifest["fold"].unique())` are
+  `numpy.int64`, not a native Python `int`; storing them directly in a
+  result dict and then `json.dumps`-ing the results crashed with
+  `TypeError: Object of type int64 is not JSON serializable`. This had
+  not surfaced before because Phase 3's `--fast` path happened to
+  hardcode `folds_to_run = [0]` as a literal Python int rather than
+  deriving it from `.unique()`, while every ablation script (and the
+  real, non-fast path in `training/train.py`) does derive it that way.
+  Fixed at each of the 8 call sites across `training/train.py`,
+  `training/ablations.py`, `training/robustness.py` and
+  `training/shortcut_check.py` by casting with `int(f) for f in
+  manifest["fold"].unique()` before sorting.
+- `kind_fusion`'s `wave` condition reported `roc_auc: nan` for every fold
+  in the final verification run. Checked directly rather than assumed
+  benign: the `--fast` sample (6 images per class, shared across both
+  kinds) left the wave-only test fold for fold 0 with zero healthy
+  images and the test fold for fold 1 with zero parkinson images, so
+  `compute_metrics`'s existing both-classes guard correctly reported NaN
+  rather than a fabricated AUC. Not a bug: an honest report of
+  insufficient `--fast`-mode data for the most data-hungry ablation
+  (it needs both kinds present, per fold, per subject).
+
+**Open:**
+- Real experiments (5 folds x 3 seeds, `pretrained=true`, full epochs)
+  have not been run; per `CLAUDE.md` this needs a GPU (Colab or Kaggle)
+  and is expected to happen outside this environment.
+- `kind_fusion`'s `--fast`-mode numbers are frequently NaN for the
+  reason above; this is inherent to how little data `--fast` mode uses
+  split four ways (kind x fold), not something further code changes can
+  fix without more `--fast` sample data, which would slow the smoke test
+  down for marginal benefit.
+
+**Assumptions:** see `docs/ASSUMPTIONS.md` (Phase 4 sections).
+
+**Next:** Phase 5 (explainability, export and registry). Needs from you:
+nothing to start the code; the real Grad-CAM overlays and ONNX export
+benefit from a real trained champion model, which needs the GPU run
+above.
 
 ## Phase 5: Explainability, export and registry - not started
 

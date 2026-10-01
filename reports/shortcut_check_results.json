@@ -1,0 +1,311 @@
+[
+  {
+    "model": "resnet50",
+    "fold": 0,
+    "seed": 42,
+    "accuracy": 0.2,
+    "sensitivity": 0.0,
+    "specificity": 1.0,
+    "precision": NaN,
+    "f1": NaN,
+    "roc_auc": 0.5,
+    "pr_auc": 0.8875,
+    "brier_score": 0.2504471423280661,
+    "threshold": 1.0,
+    "n_samples": 5.0,
+    "auc_ci_lower": 0.0,
+    "auc_ci_upper": 1.0,
+    "y_true": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "y_prob": [
+      0.49924156069755554,
+      0.4993518590927124,
+      0.49928155541419983,
+      0.4991666376590729,
+      0.49920862913131714
+    ],
+    "test_subject_id": [
+      "H10",
+      "P19",
+      "P16",
+      "P16",
+      "0241"
+    ],
+    "n_parameters": 23510081,
+    "cpu_latency_ms": 257.8020600001764,
+    "val_true": [
+      0,
+      0
+    ],
+    "val_prob": [
+      0.49932748079299927,
+      0.49937137961387634
+    ],
+    "val_subject_id": [
+      "H29",
+      "0068"
+    ],
+    "condition": "normal"
+  },
+  {
+    "model": "resnet50",
+    "fold": 1,
+    "seed": 42,
+    "accuracy": 0.7142857142857143,
+    "sensitivity": 0.0,
+    "specificity": 1.0,
+    "precision": NaN,
+    "f1": NaN,
+    "roc_auc": 0.7,
+    "pr_auc": 0.5,
+    "brier_score": 0.24947158766703342,
+    "threshold": 0.5,
+    "n_samples": 7.0,
+    "auc_ci_lower": 0.19999999999999996,
+    "auc_ci_upper": 1.0,
+    "y_true": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "y_prob": [
+      0.4987337589263916,
+      0.49868953227996826,
+      0.4987359046936035,
+      0.4988953471183777,
+      0.4987688660621643,
+      0.49875059723854065,
+      0.4987823963165283
+    ],
+    "test_subject_id": [
+      "H5",
+      "H5",
+      "H29",
+      "H5",
+      "0068",
+      "0023",
+      "0143"
+    ],
+    "n_parameters": 23510081,
+    "cpu_latency_ms": 239.76556999987224,
+    "val_true": [],
+    "val_prob": [],
+    "val_subject_id": [],
+    "condition": "normal"
+  },
+  {
+    "model": "resnet50",
+    "fold": 0,
+    "seed": 42,
+    "accuracy": 0.2,
+    "sensitivity": 0.0,
+    "specificity": 1.0,
+    "precision": NaN,
+    "f1": NaN,
+    "roc_auc": 0.0,
+    "pr_auc": 0.6791666666666667,
+    "brier_score": 0.2513603318212841,
+    "threshold": 1.0,
+    "n_samples": 5.0,
+    "auc_ci_lower": 0.0,
+    "auc_ci_upper": 0.0,
+    "y_true": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "y_prob": [
+      0.49846503138542175,
+      0.49801474809646606,
+      0.49791765213012695,
+      0.497845858335495,
+      0.49790477752685547
+    ],
+    "test_subject_id": [
+      "H10",
+      "P19",
+      "P16",
+      "P16",
+      "0241"
+    ],
+    "n_parameters": 23510081,
+    "cpu_latency_ms": 243.87910000004922,
+    "val_true": [
+      0,
+      0
+    ],
+    "val_prob": [
+      0.49777430295944214,
+      0.49804040789604187
+    ],
+    "val_subject_id": [
+      "H29",
+      "0068"
+    ],
+    "condition": "background_only"
+  },
+  {
+    "model": "resnet50",
+    "fold": 1,
+    "seed": 42,
+    "accuracy": 0.7142857142857143,
+    "sensitivity": 0.0,
+    "specificity": 1.0,
+    "precision": NaN,
+    "f1": NaN,
+    "roc_auc": 0.19999999999999996,
+    "pr_auc": 0.26666666666666666,
+    "brier_score": 0.24898516883418192,
+    "threshold": 0.5,
+    "n_samples": 7.0,
+    "auc_ci_lower": 0.0,
+    "auc_ci_upper": 0.6,
+    "y_true": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "y_prob": [
+      0.4975995123386383,
+      0.49763184785842896,
+      0.49729248881340027,
+      0.49755972623825073,
+      0.49758923053741455,
+      0.4974088966846466,
+      0.4974116086959839
+    ],
+    "test_subject_id": [
+      "H5",
+      "H5",
+      "H29",
+      "H5",
+      "0068",
+      "0023",
+      "0143"
+    ],
+    "n_parameters": 23510081,
+    "cpu_latency_ms": 215.30441000031715,
+    "val_true": [],
+    "val_prob": [],
+    "val_subject_id": [],
+    "condition": "background_only"
+  },
+  {
+    "model": "resnet50",
+    "fold": 0,
+    "seed": 42,
+    "accuracy": 0.2,
+    "sensitivity": 0.0,
+    "specificity": 1.0,
+    "precision": NaN,
+    "f1": NaN,
+    "roc_auc": 1.0,
+    "pr_auc": 1.0,
+    "brier_score": 0.2503796636192671,
+    "threshold": 1.0,
+    "n_samples": 5.0,
+    "auc_ci_lower": 1.0,
+    "auc_ci_upper": 1.0,
+    "y_true": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "y_prob": [
+      0.4991600811481476,
+      0.49942368268966675,
+      0.49926912784576416,
+      0.49927258491516113,
+      0.49929895997047424
+    ],
+    "test_subject_id": [
+      "H10",
+      "P19",
+      "P16",
+      "P16",
+      "0241"
+    ],
+    "n_parameters": 23510081,
+    "cpu_latency_ms": 227.0512699997198,
+    "val_true": [
+      0,
+      0
+    ],
+    "val_prob": [
+      0.49942392110824585,
+      0.4995855689048767
+    ],
+    "val_subject_id": [
+      "H29",
+      "0068"
+    ],
+    "condition": "skeleton_rerender"
+  },
+  {
+    "model": "resnet50",
+    "fold": 1,
+    "seed": 42,
+    "accuracy": 0.7142857142857143,
+    "sensitivity": 0.0,
+    "specificity": 1.0,
+    "precision": NaN,
+    "f1": NaN,
+    "roc_auc": 0.8,
+    "pr_auc": 0.5833333333333333,
+    "brier_score": 0.2494486989365178,
+    "threshold": 0.5,
+    "n_samples": 7.0,
+    "auc_ci_lower": 0.4,
+    "auc_ci_upper": 1.0,
+    "y_true": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "y_prob": [
+      0.498871386051178,
+      0.49866312742233276,
+      0.49880337715148926,
+      0.4986773133277893,
+      0.49897417426109314,
+      0.49889037013053894,
+      0.498967707157135
+    ],
+    "test_subject_id": [
+      "H5",
+      "H5",
+      "H29",
+      "H5",
+      "0068",
+      "0023",
+      "0143"
+    ],
+    "n_parameters": 23510081,
+    "cpu_latency_ms": 254.60523000001555,
+    "val_true": [],
+    "val_prob": [],
+    "val_subject_id": [],
+    "condition": "skeleton_rerender"
+  }
+]
