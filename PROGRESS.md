@@ -917,4 +917,15 @@ Postgres with a volume), `render.yaml` (two web services plus managed Postgres),
 
 **Next:** Phase 10 documentation.
 
-## Phase 10: Documentation and report assets - not started
+## Phase 10: Documentation and report assets - done
+
+**Built:** `README.md` (overview, architecture diagram, quick start, make targets, reproduction,
+deployment, limitations), `docs/MODEL_CARD.md`, `docs/VIVA_QA.md` (20 questions), `reports/REPORT_ASSETS.md`,
+`HANDOFF.md`, and `docs/IDEAS.md`. `docs/DATASHEET.md` is the Phase 1 audit output, unchanged.
+
+**Verified:** every command in the README reproduction list matches a script that exists and
+accepts `--config`; asset paths in `reports/REPORT_ASSETS.md` were checked against `reports/`;
+no long dashes in any document; the model card repeats only numbers that exist in committed
+files (parity 6e-8, threshold 0.5233, simulated AUC 0.998).
+
+**Open:** every image-model metric is still `TODO(run-on-gpu)`. `HANDOFF.md` lists the manual steps.
