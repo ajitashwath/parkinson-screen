@@ -14,8 +14,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -248,3 +248,6 @@ Thumbs.db
 
 # INT8 export is regenerable (python -m training.export_onnx); the fp32 dev model, card and threshold are tracked
 backend/models/*_int8.onnx
+
+# Local scratch and temp (TEMP/TMP are redirected here on Windows)
+.tmp/

@@ -336,3 +336,27 @@ Defaults picked when the spec in `CLAUDE.md` left something ambiguous, and why.
 - **`matplotlib` is pinned explicitly in `requirements-train.txt`.** It
   was previously present only as a transitive dependency of `grad-cam`
   and `shap`; the SHAP figures now depend on it directly.
+
+## Phase 7
+
+- **The app is run from the repository root** (`uvicorn backend.main:app`), so
+  `common/` and `tremor/` import as packages. The Docker image copies
+  `common/preprocess.py` and `tremor/features.py` next to `backend/` in Phase 9.
+- **The occlusion map returns two grids.** `values` is the positive probability
+  drop scaled to [0, 1] for display, and `raw_probability_drop` is the unscaled
+  drop. Covered patches are painted white, the paper colour the model was
+  trained on. It is labeled "occlusion map", never Grad-CAM.
+- **`max_occlusion_passes` counts the baseline pass.** Default 65 is exactly an
+  8x8 grid plus the baseline; a larger requested grid is reduced until it fits.
+- **`uncertain` means within `UNCERTAIN_MARGIN` (default 0.05) of the stored
+  threshold, inclusive.**
+- **Sessions hold features and scores only,** capped at 500 per device. The
+  device ID is an anonymous random string from the browser, not an account.
+- **`GET /sessions` returns `{"sessions": [...], "disclaimer": ...}`** rather than
+  a bare array, so the disclaimer field is present on every response.
+- **The rate limiter is per process and in memory.** Fine for one small
+  instance; it is not a global quota across instances. `/health` is exempt.
+- **NaN features are omitted from `/tremor` responses** because JSON cannot
+  carry them; the model still receives them as missing values.
+- **Pointer types other than mouse, pen and touch** (the frontend sends
+  "mixed") are treated as mouse for the feature code.

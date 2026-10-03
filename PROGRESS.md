@@ -795,7 +795,34 @@ clearly labeled as such in the card).
 
 **Next:** Phase 7 backend.
 
-## Phase 7: Backend (FastAPI) - not started
+## Phase 7: Backend (FastAPI) - done
+
+**Built:** `backend/settings.py`, `schemas.py`, `inference.py`, `database.py`, `security.py`,
+`main.py`, `tests/test_backend.py` (38 tests). `common/preprocess.py` now imports scikit-image
+lazily (only the skeleton mode needs it) so the backend does not need it. `backend/requirements.txt`
+gained `opencv-python-headless`. Makefile `backend` target now runs `python -m uvicorn
+backend.main:app --reload --port 8000` from the repository root. The frontend client
+(`frontend/lib/api.ts`) now saves each live result as a session and reads `{sessions: [...]}`.
+
+**Endpoints (`/api/v1`):** `GET /health`, `POST /predict` (probability, label with an uncertain
+margin, threshold, provenance, occlusion map), `POST /tremor` (features, warnings, LightGBM score,
+top contributions from `pred_contrib=True`), `POST /sessions`, `GET /sessions?device_id=`,
+`DELETE /sessions?device_id=`. Every response, errors included, carries the disclaimer.
+
+**Verified:**
+- `pytest tests/test_backend.py`: 38 passed (every endpoint, bad inputs, 503 with no models, size
+  limit 413, rate limit 429, CORS, per-device isolation and cap, serving vs training preprocessing
+  tensors identical, contributions sum to raw score).
+- A real `/predict` call with the 8x8 occlusion map took 0.9 s on CPU (target: under 3 s).
+- `ruff check .` clean; `mypy common training tremor backend tests` clean.
+- Frontend: `npm run typecheck`, `npm run lint`, `npm test` (9 passed).
+
+**Open:**
+- The loaded image model is the labeled development model, so probabilities are not meaningful.
+- Tremor analysis latency and peak memory are measured in Phase 9.
+- `.gitignore` had a `lib/` rule that silently ignored `frontend/lib/`; it is now anchored (`/lib/`).
+
+**Next:** Phase 9 (Docker, CI, deployment), then Phase 10 docs.
 
 ## Phase 8: Frontend (Next.js) - done in development mode
 

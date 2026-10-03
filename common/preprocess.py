@@ -18,7 +18,6 @@ from typing import Literal, Union
 import cv2
 import numpy as np
 from PIL import Image
-from skimage.morphology import skeletonize
 
 PreprocessMode = Literal["standard", "skeleton_rerender"]
 ImageSource = Union[str, "Path", bytes, bytearray, np.ndarray, Image.Image]
@@ -115,6 +114,8 @@ def skeleton_rerender(gray: np.ndarray, threshold: int = 200, stroke_width: int 
     stroke-thickness and pen-pressure cues (and any scanner artifact riding
     on them), used by the Phase 4 shortcut and robustness experiments to
     test whether the model actually reads the drawing rather than the scan."""
+    from skimage.morphology import skeletonize
+
     binary = gray < threshold
     if not binary.any():
         return gray.copy()

@@ -98,3 +98,15 @@ do not silently contradict earlier ones.
   `save_shap_figures`,** so importing `tremor.train_lgbm` stays light.
 - **Synthetic-only training is stated in the card, the provenance string
   and the docs,** because the spec requires the backend and UI to show it.
+
+## Phase 7
+
+- **Plain synchronous endpoints.** onnxruntime and LightGBM calls are blocking,
+  so FastAPI runs the handlers in its thread pool.
+- **Models load once at startup and a missing file does not stop the app.**
+  `/health` reports `unavailable` and the prediction endpoint answers 503, as
+  the spec requires.
+- **Postgres URLs are rewritten** from `postgres://` or `postgresql://` to the
+  `postgresql+psycopg://` form, since Render supplies the former.
+- **The frontend was reconciled to the backend, not the other way round,** by
+  saving each live result as a session and reading the wrapped session list.
