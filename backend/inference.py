@@ -29,6 +29,7 @@ IMAGE_SIZE = 224
 OCCLUSION_FILL = 1.0
 TOP_CONTRIBUTIONS = 5
 MIN_CONTRIBUTION = 1e-9
+FORWARD_CHUNK = 8
 
 FEATURE_EXPLANATIONS = {
     "duration_s": "How long the drawing took.",
@@ -107,6 +108,8 @@ class ImageModel:
     def __init__(self, path: Path, card: dict[str, Any], threshold: float) -> None:
         options = ort.SessionOptions()
         options.intra_op_num_threads = 2
+        options.enable_cpu_mem_arena = False
+        options.enable_mem_pattern = False
         self.session = ort.InferenceSession(
             str(path), sess_options=options, providers=["CPUExecutionProvider"]
         )
@@ -123,8 +126,16 @@ class ImageModel:
         return bool(self.card.get("development_model", False))
 
     def probabilities(self, batch: np.ndarray) -> np.ndarray:
-        output = self.session.run(None, {self.input_name: batch})[0]
-        return np.asarray(output, dtype=np.float64).reshape(-1)
+        """Run in small chunks: one batch of 65 images peaked near 2 GB of
+        activations, far past the 512 MB free-tier limit."""
+        outputs = [
+            np.asarray(
+                self.session.run(None, {self.input_name: batch[start : start + FORWARD_CHUNK]})[0],
+                dtype=np.float64,
+            ).reshape(-1)
+            for start in range(0, len(batch), FORWARD_CHUNK)
+        ]
+        return np.concatenate(outputs)
 
     def predict_with_occlusion(
         self, image: np.ndarray, requested_grid: int, max_passes: int

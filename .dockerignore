@@ -1,0 +1,17 @@
+.git
+.venv
+.tmp
+.env
+data
+mlruns
+wandb
+reports
+docs
+training
+tests
+configs
+frontend/node_modules
+frontend/.next
+backend/models/*_int8.onnx
+**/__pycache__
+*.db

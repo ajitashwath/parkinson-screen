@@ -360,3 +360,22 @@ Defaults picked when the spec in `CLAUDE.md` left something ambiguous, and why.
   carry them; the model still receives them as missing values.
 - **Pointer types other than mouse, pen and touch** (the frontend sends
   "mixed") are treated as mouse for the feature code.
+
+## Phase 9
+
+- **The backend image is built from the repository root,** so it can copy
+  `common/preprocess.py` and `tremor/features.py` in beside `backend/`. The
+  frontend image is built from `frontend/`.
+- **`NEXT_PUBLIC_API_URL` is a build argument,** because Next.js bakes it into
+  the browser bundle. On Render it is set by hand to the backend's public URL
+  (`sync: false`), then the frontend is redeployed.
+- **`ALLOWED_ORIGINS` on Render is set by hand** to the frontend's public URL.
+- **The backend image uses SQLite in `/tmp` unless `DATABASE_URL` is set,** so a
+  bare `docker run` works; compose and Render pass Postgres.
+- **`libgomp1` is installed in the runtime image** because LightGBM needs the
+  OpenMP runtime and `python:3.11-slim` does not include it.
+- **INT8 is not used for deployment.** The model file is 16 MB, far below
+  GitHub's 100 MB limit, and Phase 5 found INT8 was slower on this CPU. The
+  occlusion pass is chunked instead, which is what controls memory.
+- **CI installs CPU PyTorch first** so pip does not pull the multi-gigabyte CUDA
+  build, and installs `grad-cam` with `--no-deps` as `requirements-train.txt` explains.

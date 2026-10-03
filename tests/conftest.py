@@ -3,12 +3,12 @@ never real Parkinson's drawing data, per CLAUDE.md rule 2."""
 
 from __future__ import annotations
 
+import contextlib
 import math
 from pathlib import Path
 
 import numpy as np
 import pytest
-import torch  # noqa: F401  (see below)
 from PIL import Image, ImageDraw
 
 # torch must load before pandas or mlflow. On Windows, importing either of
@@ -16,6 +16,8 @@ from PIL import Image, ImageDraw
 # torch.onnx.export imports it lazily ("DLL load failed while importing
 # onnx_cpp2py_export"). conftest.py is the first project code pytest runs,
 # so importing torch here fixes the order for every test module.
+with contextlib.suppress(ImportError):  # the backend-only CI job installs no PyTorch
+    import torch  # noqa: F401
 
 
 def draw_spiral(

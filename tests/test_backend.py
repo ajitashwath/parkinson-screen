@@ -338,6 +338,19 @@ def test_occluded_batch_covers_each_cell_once() -> None:
     assert batch.sum() == 16 * 3 * 56 * 56
 
 
+def test_chunked_inference_matches_one_image_at_a_time() -> None:
+    from backend.inference import load_models
+
+    model = load_models(MODEL_DIR, "model.onnx").image
+    assert model is not None
+    rng = np.random.default_rng(0)
+    batch = rng.random((19, 3, 224, 224)).astype(np.float32)
+    together = model.probabilities(batch)
+    alone = np.concatenate([model.probabilities(batch[i : i + 1]) for i in range(len(batch))])
+    assert together.shape == (19,)
+    assert np.allclose(together, alone, atol=1e-5)
+
+
 def test_normalize_drop_scales_positive_drops_and_zeroes_flat_maps() -> None:
     scaled = normalize_drop(np.array([[0.2, -0.1], [0.1, 0.0]]))
     assert scaled.max() == 1.0 and scaled.min() == 0.0

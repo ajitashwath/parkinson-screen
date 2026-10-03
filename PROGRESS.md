@@ -878,6 +878,43 @@ top contributions from `pred_contrib=True`), `POST /sessions`, `GET /sessions?de
 
 **Next:** Phase 9 deployment work can use this frontend, but Phase 7 backend integration should be completed first if live model results are required. Needs from you: nothing to start the frontend code; manual browser testing and the Phase 7 API contract are still needed for a fully connected demo.
 
-## Phase 9: Docker, CI and deployment - not started
+## Phase 9: Docker, CI and deployment - written, Docker builds not verified here
+
+**Built:** `backend/Dockerfile` (multi-stage, `python:3.11-slim`, non-root user, runtime packages
+only, health check), `frontend/Dockerfile` (multi-stage, Next.js standalone, non-root, health
+check), `.dockerignore`, `frontend/.dockerignore`, `docker-compose.yml` (frontend, backend,
+Postgres with a volume), `render.yaml` (two web services plus managed Postgres),
+`.github/workflows/ci.yml` (python, backend-only, frontend, docker build jobs).
+
+**Verified (commands run on this machine):**
+- A clean venv built from only `backend/requirements.txt` (no torch, no shap, no scikit-learn,
+  pydantic 2.8.2 as pinned): `pytest tests/test_backend.py` gave 39 passed. This proves the
+  backend runs without the training stack.
+- A real `uvicorn backend.main:app` server answered `/api/v1/health` and `/api/v1/tremor`.
+- `docker compose config -q` accepts `docker-compose.yml`.
+- `npm run build` with `NEXT_PUBLIC_USE_MOCK_API=false` produced the standalone output;
+  `typecheck`, `lint` and `npm test` pass.
+- `ruff check .` clean, `mypy` clean, full `pytest -q`: 284 passed.
+
+**Measured (backend-only venv, Windows, CPU, development image model):**
+- `/predict` with the 8x8 occlusion map (65 forward passes): median 1.3 s, max 1.4 s (target: under 3 s).
+- `/tremor` on 960 points: median 22 ms, max 87 ms (target: under 300 ms).
+- Peak working set for the whole process: 298 MB. Before the fix it was 2.0 GB, because one batch of
+  65 images allocated huge activations. Inference now runs in chunks of 8 with the ONNX memory
+  arena off, which is what makes the 512 MB Render limit realistic.
+- Installed packages in that venv: about 550 MB, so the image is expected to be roughly 700 MB.
+  This is an estimate, not a measured image size.
+
+**Not verified (open):**
+- No Docker image was built: the Docker daemon is not running on this machine, and the system
+  drive has under 2 GB free. `docker compose up` and the `docker` CI job are therefore untested.
+  Run `docker compose up --build` once (listed in `HANDOFF.md`) and record the image size with
+  `docker images`.
+- The CI workflow has never run (nothing is pushed). Its dependency install order is untested on
+  Linux.
+- Render was not deployed (needs the user's account).
+- Peak memory inside a 512 MB container on Linux may differ from the Windows working set.
+
+**Next:** Phase 10 documentation.
 
 ## Phase 10: Documentation and report assets - not started
