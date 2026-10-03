@@ -1,0 +1,10 @@
+# LightGBM tremor model, trained on synthetic spirals only: no labeled
+# kinematic dataset exists in data/. See tremor/train_lgbm.py.
+seed: 42
+
+n_per_class: 300
+n_folds: 5
+num_boost_round: 150
+
+output_dir: backend/models
+reports_dir: reports

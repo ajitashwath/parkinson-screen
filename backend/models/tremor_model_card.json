@@ -1,0 +1,60 @@
+{
+  "model_name": "tremor-feature-lightgbm",
+  "trained_on": "synthetic",
+  "provenance": "Feature pipeline demo, trained on simulated data",
+  "development_model": false,
+  "disclaimer": "Screening aid, not a diagnosis. Possible signs only; not clinically validated.",
+  "booster_file": "tremor_lgbm.txt",
+  "format": "lightgbm text booster",
+  "label_definition": "1 = a tremor was injected into the simulated spiral, 0 = none.",
+  "feature_names": [
+    "duration_s",
+    "path_length",
+    "mean_speed",
+    "speed_cv",
+    "jerk_rms",
+    "pen_lifts",
+    "pause_ratio",
+    "tremor_band_ratio",
+    "peak_freq_hz",
+    "spectral_entropy",
+    "spiral_deviation",
+    "pressure_mean",
+    "pressure_sd"
+  ],
+  "missing_values": "NaN is accepted natively; pressure features are NaN for mouse input.",
+  "n_training_samples": 600,
+  "num_boost_round": 150,
+  "params": {
+    "objective": "binary",
+    "learning_rate": 0.1,
+    "num_leaves": 8,
+    "min_data_in_leaf": 5,
+    "feature_fraction": 0.9,
+    "verbosity": -1,
+    "deterministic": true,
+    "force_row_wise": true,
+    "num_threads": 1
+  },
+  "seed": 42,
+  "cross_validation": {
+    "n_folds": 5,
+    "auc_per_fold": [
+      0.9991666666666666,
+      0.998046875,
+      1.0,
+      0.9991666666666666,
+      0.9936093359266462
+    ],
+    "auc_mean": 0.9979979088519958,
+    "auc_std": 0.002280452965021935
+  },
+  "contributions": "booster.predict(X, pred_contrib=True) returns exact TreeSHAP values; the last column is the bias, and each row sums to the raw score.",
+  "known_limits": [
+    "Trained only on simulated spirals. The label is whether a tremor was injected, so a high score means 'looks like the simulator's tremor', not 'looks like a patient'.",
+    "The two classes are separable by construction, so a high cross-validated AUC here is evidence the features respond to tremor, not evidence of clinical accuracy.",
+    "Real hand tremor, real devices and real drawing styles differ from the simulator.",
+    "Not a diagnostic tool and not clinically validated."
+  ],
+  "contribution_residual_max_abs": 3.730349362740526e-14
+}

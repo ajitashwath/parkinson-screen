@@ -293,3 +293,46 @@ Defaults picked when the spec in `CLAUDE.md` left something ambiguous, and why.
   then reinstalled `grad-cam` and `ttach` with `--no-deps`. `pip check`
   still reports the unmet `opencv-python` declaration; headless provides
   `cv2`, so this is cosmetic.
+
+## Phase 6
+
+- **The tremor model is trained on simulated spirals only, and labeled
+  so everywhere.** `data/` holds no labeled kinematic dataset: HandPD and
+  NewHandPD are scanned images with no stroke timing, and no recorded
+  stroke dataset with diagnoses has been obtained. Per `CLAUDE.md` the
+  card therefore says `"trained_on": "synthetic"` with the provenance
+  string "Feature pipeline demo, trained on simulated data", which the
+  backend and UI must show wherever the model's output appears.
+- **The label is "a tremor was injected", and both classes draw their
+  nuisance parameters (duration, sampling rate, noise, jitter, input
+  device) from the same distributions.** `sample_scenario` draws every
+  nuisance value before deciding anything tremor-specific, so for a given
+  random state the two classes are identical except for the tremor; a
+  test checks this. Without it the model could separate classes through
+  duration or input device and the AUC would mean nothing about tremor.
+- **A cross-validated AUC near 1.0 (0.998 over 5 folds) is expected and
+  is not evidence of clinical accuracy.** The classes are separable by
+  construction. It shows the features respond to a tremor, which is what
+  this model is for.
+- **The SHAP importances describe the simulator, not patients.**
+  `spectral_entropy`, `tremor_band_ratio` and `peak_freq_hz` dominate,
+  consistent with a tremor adding a concentrated spectral peak;
+  `pen_lifts` contributes nothing because the simulator never lifts the
+  pen. A real kinematic dataset could rank them very differently.
+- **Cross-validation uses the same grouped splitter as the image models
+  with every sample as its own group.** There are no subjects to group
+  by. Using the same splitter means a real dataset with subject IDs can
+  supply real groups without changing the function.
+- **The backend uses `pred_contrib=True`, not the `shap` package.**
+  LightGBM returns exact TreeSHAP values (per-feature columns plus a bias
+  column that sums to the raw score; the largest residual measured was
+  3.7e-14). The `shap` library is imported only inside
+  `save_shap_figures`, for the offline PNGs, so the backend image needs
+  neither it nor matplotlib.
+- **The committed booster is the full-size run (300 spirals per class, 150
+  rounds), not the `--fast` one.** Unlike the image models this needs no
+  GPU, so there was no reason to commit a smoke-sized model. Its card has
+  `development_model: false`; it is still synthetic-trained.
+- **`matplotlib` is pinned explicitly in `requirements-train.txt`.** It
+  was previously present only as a transitive dependency of `grad-cam`
+  and `shap`; the SHAP figures now depend on it directly.

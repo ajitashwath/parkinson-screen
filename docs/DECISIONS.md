@@ -88,3 +88,13 @@ do not silently contradict earlier ones.
   it regenerates from the same command and binary churn in history is
   worth avoiding. Replacing the dev model with a real champion is a
   `HANDOFF.md` item.
+
+## Phase 6
+
+- **Contributions come from LightGBM's `pred_contrib=True`, not the
+  `shap` package.** It is exact TreeSHAP, keeps the backend image free of
+  shap and matplotlib, and a test asserts rows sum to the raw score.
+- **`shap` and matplotlib are imported lazily inside
+  `save_shap_figures`,** so importing `tremor.train_lgbm` stays light.
+- **Synthetic-only training is stated in the card, the provenance string
+  and the docs,** because the spec requires the backend and UI to show it.

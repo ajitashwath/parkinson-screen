@@ -775,7 +775,25 @@ clearly labeled as such in the card).
 **Next:** Phase 6 (LightGBM tremor model and SHAP).
 
 
-## Phase 6: LightGBM tremor model and SHAP - not started
+## Phase 6: LightGBM tremor model and SHAP - done
+
+**Built:** `tremor/train_lgbm.py`, `configs/tremor_lgbm.yaml`, `tests/test_train_lgbm.py`,
+`backend/models/tremor_lgbm.txt`, `backend/models/tremor_model_card.json`,
+`reports/tremor_shap_summary.png`, `reports/tremor_shap_bar.png`.
+
+**Verified:**
+- `python -m tremor.train_lgbm --config configs/tremor_lgbm.yaml`: cross-validated AUC 0.998 +/- 0.002 over 5 folds; max |sum(contributions) - raw score| 3.73e-14.
+- `pytest tests/test_train_lgbm.py`: 18 passed. Full `pytest -q`: 245 passed.
+- `ruff check` clean; `mypy common training tremor backend tests`: no issues in 44 files.
+
+**Findings:**
+- No labeled kinematic dataset exists, so the model is trained on simulated spirals only (`trained_on: synthetic`, provenance "Feature pipeline demo, trained on simulated data").
+- The AUC is near 1.0 by construction (nuisance parameters are identical for both classes, only the tremor differs) and is not clinical evidence.
+- SHAP ranks `spectral_entropy`, `tremor_band_ratio`, `peak_freq_hz` highest and `pen_lifts` at zero. This describes the simulator, not patients.
+
+**Open:** a real labeled kinematic dataset would replace the simulated one; this is a `HANDOFF.md` item.
+
+**Next:** Phase 7 backend.
 
 ## Phase 7: Backend (FastAPI) - not started
 
