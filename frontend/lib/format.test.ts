@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatPercent, labelText, statusClass } from "./format";
+import { featureText, formatPercent, labelText, statusClass } from "./format";
 
 describe("format helpers", () => {
   it("formats probabilities as bounded percentages", () => {
@@ -18,5 +18,13 @@ describe("format helpers", () => {
     expect(statusClass("lower_concern")).toContain("lime");
     expect(statusClass("higher_concern")).toContain("violet");
     expect(statusClass("uncertain")).toContain("graphite");
+  });
+
+  it("gives every backend feature a capitalized label", () => {
+    for (const key of ["duration_s", "pen_lifts", "spectral_entropy", "pressure_mean", "pressure_sd"]) {
+      const text = featureText(key);
+      expect(text).not.toContain("_");
+      expect(text[0]).toBe(text[0].toUpperCase());
+    }
   });
 });

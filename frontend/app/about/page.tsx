@@ -62,7 +62,7 @@ export default function AboutPage() {
             <div>
               <p className="eyebrow">Privacy controls</p>
               <h2 className="mt-3 text-2xl tracking-[-0.04em] text-ink">Your browser, your records.</h2>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-graphite">The local preview stores only result metadata needed for the history page. You can remove those records at any time. A connected service may apply its own retention policy.</p>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-graphite">This app stores only features and scores needed for the history page, never raw drawings or strokes. You can remove those records at any time. A connected service may apply its own retention policy.</p>
             </div>
             <DeleteDataButton />
           </div>

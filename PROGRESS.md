@@ -933,8 +933,9 @@ point when `getCoalescedEvents()` returned an empty list (it does for synthetic 
 browsers that do not fill it). It now falls back to the event itself.
 
 **Not covered:** a real touchscreen, stylus or mouse, and phone width. These were simulated events
-on a desktop pane. Minor copy to review: result-page notes still say "Development preview", and a
-couple of feature labels are not capitalized consistently ("duration s", "pen lifts").
+on a desktop pane. Copy issues found and fixed afterwards: live results wrongly said "Development preview"
+(the check matched the word "demo" in the tremor provenance), feature labels were inconsistent
+("duration s", "pen lifts"), pen lifts showed as 0.000, and the About page said "local preview".
 
 **Process note:** a dev server not started by me was already on port 3000 and my production build
 overwrote its `.next` folder. Restart that dev server (`npm run dev`) if it shows errors.

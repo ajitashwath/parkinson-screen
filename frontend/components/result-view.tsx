@@ -32,7 +32,7 @@ function formatFeatureValue(feature: string, value: number): string {
   if (feature === "duration_s") {
     return `${formatDecimal(value, 1)} s`;
   }
-  if (feature === "path_length" || feature === "mean_speed") {
+  if (feature === "path_length" || feature === "mean_speed" || feature === "pen_lifts") {
     return formatDecimal(value, 0);
   }
   if (feature === "peak_freq_hz") {
@@ -83,7 +83,7 @@ export function ResultView({ result }: { result: PredictionResult }) {
     pressure_mean: "Average pressure when pressure data is available.",
     pressure_sd: "Variation in pressure when pressure data is available.",
   };
-  const modelDescription = result.provenance.includes("demo") ? "Development preview" : "Model service response";
+  const modelDescription = result.modelVersion === "demo-preview" ? "Development preview" : "Model service response";
 
   return (
     <Reveal>

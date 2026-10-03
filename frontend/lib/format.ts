@@ -42,6 +42,11 @@ export function featureText(feature: string): string {
     pause_ratio: "Pause ratio",
     path_length: "Path length",
     mean_speed: "Mean speed",
+    duration_s: "Duration",
+    pen_lifts: "Pen lifts",
+    spectral_entropy: "Spectral entropy",
+    pressure_mean: "Mean pressure",
+    pressure_sd: "Pressure variation",
   };
   return labels[feature] ?? feature.replaceAll("_", " ");
 }
