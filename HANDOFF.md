@@ -63,8 +63,9 @@ The current `backend/models/model.onnx` is a development placeholder: replace it
 - [ ] Test-retest with volunteers: the same person draws on the same device on different days.
       Compare tremor features across sessions (see `docs/IDEAS.md`). Get consent, and do not collect
       any diagnosis information unless you have ethics approval.
-- [ ] A real browser walkthrough on a touchscreen, a stylus and a mouse, and at phone width. Pointer
-      capture and canvas behavior have only been checked through unit tests and a production build.
+- [ ] A real-device walkthrough on a touchscreen, a stylus and a mouse, and at phone width. The
+      draw, submit, result, history and delete flow was checked in a desktop browser pane with
+      simulated pointer events only (see `PROGRESS.md`).
 
 ## 7. Before you present
 

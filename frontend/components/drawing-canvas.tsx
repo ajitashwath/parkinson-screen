@@ -233,7 +233,8 @@ export function DrawingCanvas({ kind, isSubmitting, onSubmit, onQualityChange }:
     }
     event.preventDefault();
     const nativeEvent = event.nativeEvent;
-    const samples = typeof nativeEvent.getCoalescedEvents === "function" ? nativeEvent.getCoalescedEvents() : [nativeEvent];
+    const coalesced = typeof nativeEvent.getCoalescedEvents === "function" ? nativeEvent.getCoalescedEvents() : [];
+    const samples = coalesced.length > 0 ? coalesced : [nativeEvent];
     for (const sample of samples) {
       addSample(sample);
     }

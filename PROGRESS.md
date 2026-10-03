@@ -917,6 +917,28 @@ Postgres with a volume), `render.yaml` (two web services plus managed Postgres),
 
 **Next:** Phase 10 documentation.
 
+## Browser walkthrough (after Phase 9)
+
+Ran the real backend (clean backend-only venv) and a production frontend build in the built-in
+browser, with pointer events dispatched on the canvas (a simulated pen, 5.5 s spiral, 354 samples).
+
+**Verified:** draw, Analyze, then `POST /predict`, `/tremor` and `/sessions` all returned 200 or 201
+through real CORS; the result page showed probability, label, occlusion map, tremor report,
+contribution chart, provenance, the development-model warning and the disclaimer; `/history`
+showed the session log, baseline band and both charts from the backend; "Delete my data" sent
+`DELETE /sessions` (200) and removed only that device's rows.
+
+**Bug found and fixed:** `frontend/components/drawing-canvas.tsx` recorded only the first and last
+point when `getCoalescedEvents()` returned an empty list (it does for synthetic events and in
+browsers that do not fill it). It now falls back to the event itself.
+
+**Not covered:** a real touchscreen, stylus or mouse, and phone width. These were simulated events
+on a desktop pane. Minor copy to review: result-page notes still say "Development preview", and a
+couple of feature labels are not capitalized consistently ("duration s", "pen lifts").
+
+**Process note:** a dev server not started by me was already on port 3000 and my production build
+overwrote its `.next` folder. Restart that dev server (`npm run dev`) if it shows errors.
+
 ## Phase 10: Documentation and report assets - done
 
 **Built:** `README.md` (overview, architecture diagram, quick start, make targets, reproduction,
