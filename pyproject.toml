@@ -29,3 +29,4 @@ exclude = "^(data|frontend|reports|mlruns|wandb|\\.venv|venv|node_modules)/"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
