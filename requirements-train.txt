@@ -17,7 +17,12 @@ hf_xet==1.6.0
 scikit-learn==1.5.1
 scikit-image==0.24.0
 opencv-python-headless==4.10.0.84
-pytorch-grad-cam==1.5.4
+# PyPI name is grad-cam (imports as pytorch_grad_cam). It declares a hard
+# dependency on opencv-python, which on a fresh install drags in numpy 2.x
+# and a second cv2 build that conflict with the pins below. Install the
+# rest of this file first, then `pip install --no-deps grad-cam==1.5.4 ttach`.
+grad-cam==1.5.4
+ttach==0.0.3
 imagehash==4.3.1
 
 # Experiment tracking

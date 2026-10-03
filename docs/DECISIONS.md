@@ -77,3 +77,14 @@ do not silently contradict earlier ones.
   remains Phase 2's tremor synthetic generator, which has no real-data
   substitute. Full reasoning for the `--fast` design (looping over every
   backbone, re-sampling then re-folding) in `docs/ASSUMPTIONS.md`.
+
+## Phase 5
+
+- **The committed `backend/models/model.onnx` is a development model.**
+  Phase 7's backend needs a model file to load and Phase 5's done
+  criterion allows a tiny fast-mode model "clearly labeled as such". The
+  card carries `development_model: true` and a warning, and
+  `threshold.json` sits beside it. `model_int8.onnx` is gitignored because
+  it regenerates from the same command and binary churn in history is
+  worth avoiding. Replacing the dev model with a real champion is a
+  `HANDOFF.md` item.

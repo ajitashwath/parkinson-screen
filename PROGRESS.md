@@ -689,7 +689,91 @@ nothing to start the code; the real Grad-CAM overlays and ONNX export
 benefit from a real trained champion model, which needs the GPU run
 above.
 
-## Phase 5: Explainability, export and registry - not started
+## Phase 5: Explainability, export and registry - done
+
+**Plan:**
+- `training/explain.py`: Grad-CAM for the timm CNNs/ConvNeXt, a ViT/DINOv2
+  reshape transform for the transformer backbones, overlays for correct
+  and incorrect predictions (failure cases included), plus two
+  quantitative checks: (a) fraction of heatmap mass on stroke pixels
+  (compared against the strokes' share of image area, and with a
+  border-mass fraction so attention to borders or background is reported
+  plainly), (b) a deletion test against a random-order baseline.
+- `training/register.py`: refit the champion backbone on all data with a
+  grouped internal validation split (threshold chosen there), register it
+  in MLflow with alias `champion`, threshold stored as a version tag.
+- `training/export_onnx.py`: load the champion from the registry, export
+  to ONNX (opset 17, dynamic batch, probability output), PyTorch-vs-ONNX
+  parity within 1e-4, optional INT8 dynamic quantization with size,
+  latency and AUC-change report, write `backend/models/model_card.json`
+  and the threshold next to the model. `--fast` registers a tiny dev
+  champion first and labels everything as a development model.
+- `configs/export.yaml`; tests for all three modules.
+
+**Done when:** the parity test passes and `backend/models/` contains a
+model and its card (a tiny fast-mode model is acceptable for development,
+clearly labeled as such in the card).
+
+**Built:**
+- `training/explain.py`: Grad-CAM with a per-backbone target layer
+  (timm CNN/ConvNeXt/ViT blocks, DINOv2 `norm1`), `vit_reshape_transform`
+  (drops the class token, folds patches into their grid; works for 14x14
+  and 16x16), predicted-class targets, stroke-mass / area / border-mass
+  statistics, a deletion test against a random-order baseline, overlays
+  for correct and incorrect predictions, and a generated plain-language
+  finding that labels `--fast` runs as development runs.
+- `training/register.py`: refit the chosen backbone on all data, register
+  in MLflow, alias `champion`, threshold as a version tag;
+  `load_champion` fails with instructions when none exists.
+- `training/export_onnx.py`: ONNX (opset 17, dynamic batch, probability
+  output), PyTorch-vs-ONNX parity check that raises if it fails, INT8
+  dynamic quantization with size/latency/AUC-change report, model card,
+  threshold file.
+- `configs/export.yaml`, `backend/models/{model.onnx, model_card.json,
+  threshold.json}` (development model, labeled), `reports/explain*`.
+- Tests: `tests/test_explain.py` (31), `tests/test_export_onnx.py` (20),
+  `tests/test_register.py` (8).
+
+**Verified:**
+- `ruff check .` clean; `mypy common training tremor backend tests` - "no
+  issues found in 42 source files"; `pytest -q` - 227 passed.
+- `python -m training.export_onnx --config configs/export.yaml --fast`
+  run for real (trains a dev champion, registers it, exports, checks
+  parity, quantizes): parity max abs difference 5.96e-08 against the 1e-4
+  requirement; fp32 16.0 MB / 17 ms per image; INT8 4.3 MB / 142 ms.
+- `python -m training.explain --config configs/train_resnet50.yaml --fast`
+  run for real: 5 overlays (1 correct, 4 incorrect), summary CSV,
+  deletion-curve figure, finding. Viewed an overlay: heatmap sits on the
+  spiral. The numbers describe a random-init 1-epoch model and the
+  finding says so.
+- Grad-CAM verified on all five backbones by tests that run it on each,
+  which is the actual check on the ViT/DINOv2 reshape transform.
+
+**Bugs found and fixed during verification:**
+- The Phase 0 pin `pytorch-grad-cam==1.5.4` does not exist on PyPI; the
+  package is `grad-cam`. Installing it then upgraded numpy to 2.x and
+  added a second OpenCV build, breaking the pinned stack. Restored both
+  and documented the `--no-deps` install in `requirements-train.txt`.
+- DINOv2's HF layer has `norm1`, not `layernorm_before` (found by the
+  Grad-CAM-on-every-backbone test, then confirmed by listing the
+  submodule names).
+- `onnx` failed with "DLL load failed" in the full suite but not in
+  isolation. Bisected to import order: importing `pandas` or `mlflow`
+  before `torch` breaks onnx's DLL on this machine. Fixed in
+  `tests/conftest.py` with a comment; `training/export_onnx.py` already
+  imports `onnxruntime` first.
+- A scripted edit of `explain.py` half-applied (one replacement missed on
+  an escaped newline), leaving undefined names; caught immediately by the
+  failing tests and fixed by hand.
+
+**Open:**
+- INT8 is not a latency win for `efficientnet_b0` on this CPU (about 8x
+  slower), only a size win; re-measure for the real champion.
+- No real champion exists: the committed model is a development model
+  (the card says so) and `cv_metrics` is `TODO(run-on-gpu)`.
+
+**Next:** Phase 6 (LightGBM tremor model and SHAP).
+
 
 ## Phase 6: LightGBM tremor model and SHAP - not started
 

@@ -1,0 +1,23 @@
+# Champion registration and ONNX export. Merged over train_config, so the
+# architecture and hyperparameters have one source of truth; keys here win.
+train_config: configs/train_resnet50.yaml
+
+# Placeholder champion until the real GPU cross-validation picks one:
+# efficientnet_b0 is the smallest backbone (about 16 MB as ONNX), which
+# also suits Render's 512 MB limit.
+backbone: efficientnet_b0
+model_name: parkinsons-screening-champion
+seed: 42
+
+mlruns_dir: mlruns
+output_dir: backend/models
+
+opset: 17
+parity_atol: 0.0001
+parity_images: 16
+quantize_int8: true
+
+# Cross-validation results to quote in the model card, from a real run of
+# training.train. Leave null until one exists: the card then says so
+# instead of quoting a --fast smoke run as if it were a result.
+cv_results_path: null

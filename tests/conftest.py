@@ -8,7 +8,14 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import torch  # noqa: F401  (see below)
 from PIL import Image, ImageDraw
+
+# torch must load before pandas or mlflow. On Windows, importing either of
+# those first leaves onnx unable to initialize its DLL later, when
+# torch.onnx.export imports it lazily ("DLL load failed while importing
+# onnx_cpp2py_export"). conftest.py is the first project code pytest runs,
+# so importing torch here fixes the order for every test module.
 
 
 def draw_spiral(

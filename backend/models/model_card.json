@@ -1,0 +1,68 @@
+{
+  "model_name": "parkinsons-screening-champion",
+  "backbone": "efficientnet_b0",
+  "version": "1",
+  "format": "onnx",
+  "opset": 17,
+  "development_model": true,
+  "disclaimer": "Screening aid, not a diagnosis. Possible signs only; not clinically validated.",
+  "input_spec": {
+    "name": "image",
+    "dtype": "float32",
+    "shape": [
+      "batch",
+      3,
+      224,
+      224
+    ],
+    "value_range": [
+      0.0,
+      1.0
+    ],
+    "preprocessing": "common/preprocess.py preprocess_image (standard mode), then HWC to CHW. No ImageNet mean/std normalization."
+  },
+  "output_spec": {
+    "name": "probability",
+    "dtype": "float32",
+    "shape": [
+      "batch"
+    ],
+    "meaning": "Probability of the Parkinson's class, sigmoid already applied."
+  },
+  "threshold": 0.5232528448104858,
+  "threshold_selection": "Highest specificity on a grouped validation split at a target sensitivity of 0.9. Chosen on validation only.",
+  "training_data": {
+    "sources": "HandPD and NewHandPD (UNESP), spiral and meander (wave) drawings",
+    "refit": "Final model refit on all available images; cross-validation estimates come from separate fold models.",
+    "seed": 42
+  },
+  "cv_metrics": {
+    "status": "TODO(run-on-gpu)",
+    "note": "No real cross-validation run has been recorded for this model yet."
+  },
+  "export": {
+    "parity_max_abs_diff": 5.960464477539063e-08,
+    "parity_atol": 0.0001,
+    "parity_images": 16,
+    "file_size_mb": 16.0,
+    "cpu_latency_ms": 17.16870000018389,
+    "sample_auc": 0.25,
+    "int8": {
+      "quantized_ops": "all_supported_ops",
+      "path": "backend\\models\\model_int8.onnx",
+      "file_size_mb": 4.33,
+      "cpu_latency_ms": 142.29359999808366,
+      "sample_auc": 0.375,
+      "sample_auc_change": 0.125,
+      "note": "AUC change is measured on a small sample and only compares the two exports against each other."
+    }
+  },
+  "known_limits": [
+    "Trained on scanned paper drawings (HandPD and NewHandPD); live canvas drawings are a different domain, and predictions on them are not validated against clinical labels.",
+    "Small dataset (158 subjects across both sources): metrics have wide confidence intervals and many model comparisons are within noise.",
+    "Class imbalance: Parkinson's subjects outnumber healthy subjects in the training data.",
+    "The decision threshold favors sensitivity on a validation split, so expect false positives.",
+    "Not a diagnostic tool. It must not be used to rule a condition in or out."
+  ],
+  "warning": "Development model: trained for one epoch on a tiny sample with random initialization to prove the pipeline runs. Not a real screening model."
+}

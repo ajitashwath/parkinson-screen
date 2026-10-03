@@ -230,3 +230,66 @@ Defaults picked when the spec in `CLAUDE.md` left something ambiguous, and why.
   `training.ablations --fast` run hung with no output for several
   minutes, rather than assuming the eventual symptom (a hang) pointed at
   the actual cause.
+
+## Phase 5
+
+- **The champion is a refit on all data, not one of the cross-validation
+  fold models.** `training/train.py` keeps no model (fold checkpoints are
+  scratch, deleted after use), so there is nothing to register from it.
+  `training/register.py` instead refits the chosen backbone on every
+  image, with a grouped internal validation split used only to pick the
+  epoch and the sensitivity-favoring threshold. Cross-validation numbers
+  describe the recipe; the shipped model is a separate fit of it. The
+  model card says so.
+- **`configs/export.yaml` defaults the champion backbone to
+  `efficientnet_b0`, as a placeholder.** No real cross-validation run
+  exists yet to pick a champion. `efficientnet_b0` is the smallest
+  backbone (about 4M parameters, 16 MB as ONNX), which keeps the committed
+  development model small and suits Render's 512 MB limit. Change
+  `backbone` once the GPU run picks a real champion.
+- **The model card quotes cross-validation metrics only from a real
+  results file named in `cv_results_path`, which defaults to null.** The
+  only `reports/training_results.json` in the repo is a `--fast` smoke
+  run, so quoting it would present noise as a result. With no real file
+  the card says `TODO(run-on-gpu)`.
+- **The deployed ONNX graph outputs a probability, not a logit.** The
+  exported wrapper applies the sigmoid, so the backend never needs to
+  know the model emits logits and cannot forget the activation.
+- **INT8 dynamic quantization saves file size but was about 8 times
+  slower on CPU for this model.** Measured on the development
+  `efficientnet_b0`: 16.0 MB to 4.3 MB, but 17 ms to 142 ms per image,
+  because ONNX Runtime's integer convolution kernels handle
+  EfficientNet's depthwise convolutions poorly. The card records both
+  numbers. The backend should serve the fp32 file unless memory, not
+  latency, is the binding constraint; re-measure for whichever backbone
+  becomes champion. `quantize_int8` tries all supported ops first and
+  falls back to MatMul/Gemm only if ONNX Runtime cannot run the
+  quantized convolutions.
+- **The INT8 `sample_auc_change` is computed on 16 images and only
+  compares the two exports with each other.** It is a smoke check that
+  quantization did not break the model, not an accuracy estimate.
+- **Grad-CAM targets the predicted class.** A single-logit model has one
+  output, so the target is `+logit` when the prediction is "parkinson" and
+  `-logit` otherwise; the deletion test then tracks the predicted class's
+  probability. Heatmaps for a wrong prediction explain the wrong answer,
+  which is exactly what the failure-case overlays are for.
+- **The stroke mask is dilated by 3 pixels before measuring heatmap
+  mass on strokes.** Grad-CAM maps are far coarser than a one-pixel
+  stroke; without dilation almost no mass would ever land on a stroke
+  regardless of what the model looks at. The stroke's share of image
+  area is reported alongside, so a score of 1.0 reads as "no preference
+  for strokes over blank paper", not as a low number.
+- **`explain --fast` and the committed `reports/explain*` files describe
+  a random-initialization, one-epoch model.** The generated finding says
+  so itself. The overlays prove the Grad-CAM pipeline runs on all five
+  backbones (including the ViT and DINOv2 reshape transform, checked by
+  tests that run Grad-CAM on each); they say nothing about what a trained
+  model attends to.
+- **`grad-cam` installs with `--no-deps`.** Its PyPI name is `grad-cam`
+  (the Phase 0 pin `pytorch-grad-cam` does not exist on PyPI). It declares
+  a hard dependency on `opencv-python`, which on this machine upgraded
+  numpy to 2.x and installed a second `cv2` build, conflicting with the
+  pinned numpy 1.26.4 and `opencv-python-headless`. Restored both pins,
+  then reinstalled `grad-cam` and `ttach` with `--no-deps`. `pip check`
+  still reports the unmet `opencv-python` declaration; headless provides
+  `cv2`, so this is cosmetic.

@@ -245,3 +245,6 @@ frontend/next-env.d.ts
 # OS files
 .DS_Store
 Thumbs.db
+
+# INT8 export is regenerable (python -m training.export_onnx); the fp32 dev model, card and threshold are tracked
+backend/models/*_int8.onnx
