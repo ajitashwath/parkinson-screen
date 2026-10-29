@@ -1,4 +1,4 @@
-PYTHON ?= python
+PYTHON ?= $(shell if [ -x .venv/Scripts/python.exe ]; then echo .venv/Scripts/python.exe; elif [ -x .venv/bin/python ]; then echo .venv/bin/python; else echo python; fi)
 PIP ?= $(PYTHON) -m pip
 
 .PHONY: setup check lint typecheck test train-fast export backend frontend up

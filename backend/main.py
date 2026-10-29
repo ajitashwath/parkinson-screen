@@ -10,7 +10,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -40,7 +40,7 @@ from backend.schemas import (
     TremorResponse,
 )
 from backend.security import LimitsMiddleware, RateLimiter, error_response
-from backend.settings import Settings, get_settings
+from backend.settings import DISCLAIMER, Settings, get_settings
 from tremor.features import StrokePoint
 
 logger = logging.getLogger("backend")
@@ -232,6 +232,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Parkinson's screening aid API", version="1.0.0", lifespan=lifespan)
     app.state.settings = settings
+
+    @app.get("/")
+    def root() -> dict[str, str]:
+        return {
+            "name": "Parkinson's screening aid API",
+            "status": "ok",
+            "docs": "/docs",
+            "health": "/api/v1/health",
+            "disclaimer": DISCLAIMER,
+        }
+
+    @app.get("/health")
+    def health_alias() -> RedirectResponse:
+        return RedirectResponse(url="/api/v1/health")
     app.add_middleware(
         LimitsMiddleware,
         max_request_bytes=settings.max_request_bytes,
@@ -262,3 +276,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
 
 app = create_app()
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
