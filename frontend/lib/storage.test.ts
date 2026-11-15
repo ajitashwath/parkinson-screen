@@ -52,4 +52,26 @@ describe("local result storage", () => {
     expect(getStoredResult(result.id)).toBeNull();
     expect(getSessions()).toEqual([]);
   });
+
+  it("returns sessions sorted newest-first and caps history at 30", () => {
+    for (let index = 0; index < 35; index += 1) {
+      saveResult({
+        ...result,
+        id: `result-${index}`,
+        createdAt: `2026-01-${String(index + 1).padStart(2, "0")}T10:00:00.000Z`,
+      });
+    }
+    const sessions = getSessions();
+    expect(sessions).toHaveLength(30);
+    expect(sessions[0]?.id).toBe("result-34");
+    expect(sessions.at(-1)?.id).toBe("result-5");
+  });
+
+  it("returns null for a missing result and tolerates corrupt stored data", () => {
+    expect(getStoredResult("missing")).toBeNull();
+    window.localStorage.setItem("screen-results-v1", "{not-json");
+    window.localStorage.setItem("screen-sessions-v1", "[broken");
+    expect(getStoredResult("anything")).toBeNull();
+    expect(getSessions()).toEqual([]);
+  });
 });
