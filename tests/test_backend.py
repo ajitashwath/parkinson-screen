@@ -265,6 +265,32 @@ def test_sessions_store_features_and_scores_only() -> None:
     assert not columns & {"image", "image_base64", "points", "strokes", "drawing"}
 
 
+def test_root_returns_service_metadata_and_disclaimer(client) -> None:
+    response = client.get("/")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["docs"] == "/docs"
+    assert body["health"] == "/api/v1/health"
+    assert body["disclaimer"] == DISCLAIMER
+
+
+def test_health_alias_redirects_to_versioned_health(client) -> None:
+    response = client.get("/health", follow_redirects=False)
+    assert response.status_code in {307, 308}
+    assert response.headers["location"] == "/api/v1/health"
+
+    followed = client.get("/health")
+    assert followed.status_code == 200
+    assert followed.json()["disclaimer"] == DISCLAIMER
+
+
+def test_sessions_reject_non_finite_feature_values(client) -> None:
+    response = client.post(f"{API}/sessions", json=session_body(features={"bad": float("nan")}))
+    assert response.status_code == 422
+    assert response.json()["code"] == "invalid_request"
+
+
 def test_sessions_are_capped_per_device() -> None:
     with TestClient(create_app(settings_with(max_sessions_per_device=3))) as capped:
         for _ in range(5):
